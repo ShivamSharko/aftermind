@@ -156,6 +156,9 @@ struct MessageBubble: View {
 
                 if !message.sources.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
+                        Text("SOURCES")
+                            .font(.system(size: 8, weight: .heavy))
+                            .foregroundColor(Theme.textSecondary)
                         ForEach(Array(message.sources.prefix(3)), id: \.self) { source in
                             HStack(spacing: 4) {
                                 Image(systemName: "link")
