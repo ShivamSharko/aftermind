@@ -3,43 +3,78 @@ import SwiftData
 
 struct MemoryItemDetailView: View {
     let item: MemoryItemModel
-    
+
     var body: some View {
-        List {
-            Section("Type") {
-                Text(item.type.capitalized)
-            }
-            Section("Title") {
-                Text(item.title).font(.headline)
-            }
-            Section("Description") {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack {
+                    TypeBadge(type: item.type)
+                    Spacer()
+                    Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundColor(Theme.textSecondary)
+                }
+
+                Text(item.title)
+                    .font(.title2.weight(.bold))
+                    .foregroundColor(.white)
+
                 Text(item.detail)
-            }
-            if !item.people.isEmpty {
-                Section("People") {
-                    ForEach(item.people, id: \.self) { person in
-                        Label(person, systemImage: "person.fill")
+                    .font(.callout)
+                    .foregroundColor(.white.opacity(0.85))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+
+                if !item.people.isEmpty {
+                    SectionHeader(title: "People")
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(item.people, id: \.self) { person in
+                                PillChip(title: person, isSelected: false)
+                            }
+                        }
                     }
                 }
-            }
-            if let due = item.dueText {
-                Section("Due") {
-                    Text(due)
+
+                if let due = item.dueText {
+                    SectionHeader(title: "Due")
+                    Label(due, systemImage: "calendar")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Theme.accent)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
                 }
-            }
-            Section("Evidence") {
-                Text(item.evidence)
-                    .font(.callout)
-                    .italic()
-                    .foregroundStyle(.secondary)
-            }
-            Section("Confidence") {
-                ProgressView(value: item.confidence) {
+
+                SectionHeader(title: "Evidence")
+                Text("“\(item.evidence)”")
+                    .font(.callout.italic())
+                    .foregroundColor(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+
+                SectionHeader(title: "Confidence")
+                VStack(alignment: .leading, spacing: 8) {
+                    ProgressView(value: item.confidence)
+                        .tint(Theme.accent)
                     Text("\(Int(item.confidence * 100))% confident")
+                        .font(.caption)
+                        .foregroundColor(Theme.textSecondary)
                 }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
-        .navigationTitle(item.title)
+        .background(AmbientBackground())
+        .navigationTitle("Memory")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Theme.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
     }
 }
-

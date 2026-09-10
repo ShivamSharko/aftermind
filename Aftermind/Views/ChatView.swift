@@ -20,30 +20,46 @@ struct ChatView: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Chat")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Answers grounded in your memories, with sources.")
+                        .font(.subheadline)
+                        .foregroundColor(Theme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
                 ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(alignment: .leading, spacing: 14) {
                             ForEach(messages) { message in
                                 MessageBubble(message: message)
                                     .id(message.id)
                             }
                             if isLoading {
-                                HStack {
+                                HStack(spacing: 10) {
                                     ProgressView()
-                                    Text("Aftermind is searching your memory...")
+                                        .tint(Theme.accent)
+                                    Text("Searching your memory...")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundColor(Theme.textSecondary)
                                 }
-                                .padding(.leading)
+                                .padding(.leading, 4)
                                 .id("loading")
                             }
                         }
-                        .padding()
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
                     }
+                    .scrollDismissesKeyboard(.interactively)
                     .onChange(of: messages.count) { _, _ in
                         if let lastId = messages.last?.id {
-                            withAnimation { proxy.scrollTo(lastId, anchor: .bottom) }
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { proxy.scrollTo(lastId, anchor: .bottom) }
                         }
                     }
                     .onChange(of: isLoading) { _, loading in
@@ -53,26 +69,35 @@ struct ChatView: View {
                     }
                 }
 
-                Divider()
-
-                HStack {
-                    TextField("Ask about your memories...", text: $inputText)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit { sendMessage() }
+                HStack(spacing: 10) {
+                    TextField("Ask your memory...", text: $inputText)
+                        .foregroundColor(.white)
+                        .tint(Theme.accent)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
+                        .background(Theme.card, in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 1))
+                        .onSubmit(sendMessage)
 
                     Button(action: sendMessage) {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title)
-                            .foregroundStyle(inputText.isEmpty || isLoading ? .gray : .blue)
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.black)
+                            .frame(width: 46, height: 46)
+                            .background(inputText.isEmpty || isLoading ? Color.white.opacity(0.15) : Theme.accent)
+                            .clipShape(Circle())
                     }
                     .disabled(inputText.isEmpty || isLoading)
+                    .buttonStyle(PressableStyle())
                 }
-                .padding()
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 92)
             }
-            .navigationTitle("Chat")
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear {
                 if messages.isEmpty {
-                    messages.append(ChatMessage(role: .assistant, content: "Hi! I'm Aftermind. Try: \"What did I promise to do?\" or \"What did I discuss with Rahul last week?\""))
+                    messages.append(ChatMessage(role: .assistant, content: "Hi! I'm Aftermind. Try: “What did I promise to do?” or “What did I discuss with Rahul last week?”"))
                 }
             }
         }
@@ -118,33 +143,35 @@ struct MessageBubble: View {
 
     var body: some View {
         HStack {
-            if message.role == .user { Spacer() }
+            if message.role == .user { Spacer(minLength: 40) }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
                 Text(message.content)
-                    .padding(12)
-                    .background(message.role == .user ? Color.blue : Color(.systemGray6))
-                    .foregroundStyle(message.role == .user ? .white : .primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .frame(maxWidth: 280, alignment: message.role == .user ? .trailing : .leading)
+                    .font(.callout)
+                    .foregroundColor(message.role == .user ? .black : .white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(message.role == .user ? Theme.accent : Theme.card, in: RoundedRectangle(cornerRadius: 20))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(message.role == .user ? Color.clear : Color.white.opacity(0.06), lineWidth: 1))
 
                 if !message.sources.isEmpty {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Sources:")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
                         ForEach(Array(message.sources.prefix(3)), id: \.self) { source in
-                            Label(source, systemImage: "link")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                            HStack(spacing: 4) {
+                                Image(systemName: "link")
+                                    .font(.system(size: 8, weight: .bold))
+                                Text(source)
+                                    .font(.caption2)
+                                    .lineLimit(1)
+                            }
+                            .foregroundColor(Theme.textSecondary)
                         }
                     }
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 6)
                 }
             }
 
-            if message.role == .assistant { Spacer() }
+            if message.role == .assistant { Spacer(minLength: 40) }
         }
     }
 }

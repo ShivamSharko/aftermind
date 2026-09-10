@@ -1,22 +1,74 @@
 import SwiftUI
+import UIKit
+
+enum AppTab: Int, CaseIterable {
+    case capture, memory, chat
+
+    var icon: String {
+        switch self {
+        case .capture: return "mic.fill"
+        case .memory: return "square.stack.3d.up.fill"
+        case .chat: return "bubble.left.and.bubble.right.fill"
+        }
+    }
+}
 
 struct RootView: View {
+    @State private var selected: AppTab = .capture
+
     var body: some View {
-        TabView {
-            CaptureView()
-                .tabItem {
-                    Label("Capture", systemImage: "mic.fill")
+        ZStack(alignment: .bottom) {
+            Group {
+                switch selected {
+                case .capture: CaptureView()
+                case .memory: MemoryListView()
+                case .chat: ChatView()
                 }
-            
-            MemoryListView()
-                .tabItem {
-                    Label("Memory", systemImage: "brain.head.profile")
-                }
-            
-            ChatView()
-                .tabItem {
-                    Label("Chat", systemImage: "bubble.left.and.bubble.right.fill")
-                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transition(.opacity)
+
+            FloatingTabBar(selected: $selected)
+                .padding(.horizontal, 28)
+                .padding(.bottom, 10)
         }
+        .background(AmbientBackground())
+        .preferredColorScheme(.dark)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selected)
+    }
+}
+
+struct FloatingTabBar: View {
+    @Binding var selected: AppTab
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(AppTab.allCases, id: \.rawValue) { tab in
+                Button {
+                    selected = tab
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                } label: {
+                    ZStack {
+                        if selected == tab {
+                            Circle()
+                                .fill(Theme.accent)
+                                .frame(width: 46, height: 46)
+                                .shadow(color: Theme.accent.opacity(0.45), radius: 14, y: 4)
+                        }
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(selected == tab ? .black : .white.opacity(0.65))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 58)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableStyle())
+            }
+        }
+        .padding(.horizontal, 10)
+        .background(Color(red: 0.10, green: 0.10, blue: 0.13).opacity(0.92), in: Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 1))
+        .shadow(color: .black.opacity(0.45), radius: 22, y: 10)
     }
 }
