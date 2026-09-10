@@ -4,6 +4,9 @@ import SwiftData
 struct CaptureView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var sessions: [SessionModel]
+    @Query(filter: #Predicate<MemoryItemModel> { item in
+        (item.type == "commitment" || item.type == "task") && item.isCompleted == false
+    }, sort: \MemoryItemModel.createdAt, order: .reverse) private var openItems: [MemoryItemModel]
 
     @StateObject private var recording = RecordingService()
     private let transcriptionService = AppConfig.transcriptionService
@@ -58,6 +61,30 @@ struct CaptureView: View {
                     }
 
                     micCard
+
+                    if !openItems.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "bolt.fill").foregroundColor(Theme.accent)
+                                Text("Open Focus").font(.headline).foregroundColor(.white)
+                                Spacer()
+                                Text("\(openItems.count)").font(.caption.bold()).foregroundColor(Theme.accent)
+                            }
+                            ForEach(openItems.prefix(2)) { item in
+                                HStack(spacing: 10) {
+                                    Circle().fill(Theme.accent).frame(width: 6, height: 6)
+                                    Text(item.title).font(.subheadline).foregroundColor(.white.opacity(0.85)).lineLimit(1)
+                                    Spacer()
+                                    if let due = item.dueText {
+                                        Text(due).font(.caption2).foregroundColor(Theme.textSecondary)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.2), lineWidth: 1))
+                    }
 
                     Button {
                         Task { await toggle() }

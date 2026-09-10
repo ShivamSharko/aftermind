@@ -184,6 +184,7 @@ struct MemoryListView: View {
 }
 
 struct SessionDetailView: View {
+    @Environment(\.modelContext) private var modelContext
     let session: SessionModel
 
     var body: some View {
@@ -223,6 +224,15 @@ struct SessionDetailView: View {
                             itemCard(item)
                         }
                         .buttonStyle(PressableStyle())
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button {
+                                item.isCompleted.toggle()
+                                try? modelContext.save()
+                            } label: {
+                                Label(item.isCompleted ? "Reopen" : "Done", systemImage: item.isCompleted ? "arrow.uturn.backward" : "checkmark")
+                            }
+                            .tint(item.isCompleted ? .orange : Theme.accent)
+                        }
                     }
                 }
 
@@ -258,6 +268,8 @@ struct SessionDetailView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.leading)
+                .opacity(item.isCompleted ? 0.5 : 1.0)
+                .strikethrough(item.isCompleted)
             if !item.people.isEmpty {
                 Text(item.people.joined(separator: ", "))
                     .font(.caption)

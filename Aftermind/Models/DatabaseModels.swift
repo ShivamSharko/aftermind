@@ -30,11 +30,12 @@ final class MemoryItemModel {
     var evidence: String = ""
     var confidence: Double = 0.0
     var dueText: String?
+    var isCompleted: Bool = false
     var createdAt: Date = Date()
     
     var session: SessionModel?
     
-    init(type: String, title: String, detail: String, people: [String], evidence: String, confidence: Double, dueText: String? = nil) {
+    init(type: String, title: String, detail: String, people: [String], evidence: String, confidence: Double, dueText: String? = nil, isCompleted: Bool = false) {
         self.type = type
         self.title = title
         self.detail = detail
@@ -42,6 +43,7 @@ final class MemoryItemModel {
         self.evidence = evidence
         self.confidence = confidence
         self.dueText = dueText
+        self.isCompleted = isCompleted
     }
 }
 
