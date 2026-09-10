@@ -26,7 +26,7 @@ The core loop, end to end: **Record → Transcribe → Clean/Structure → Store
 
 ## Context schema
 `Session` — summary, topics, participants, raw transcript (kept only as provenance).
-`MemoryItem` — type, title, detail, people[], dueText, evidence, confidence, tags, link to session.
+`MemoryItem` — type, title, detail, owner ("user" or a person's name), people[], dueText plus resolved dueDate, evidence, confidence, tags, link to session.
 Relationships: items cascade-delete with their session; people and topics connect items across sessions for future graph-style retrieval.
 
 ## Technical architecture
@@ -35,23 +35,23 @@ Audio (AVAudioRecorder) → TranscriptionService (Groq whisper-large-v3) → Con
 
 ## How chat retrieves context
 1. Intent parsing: item-type keywords (promise/commit → commitment, task, idea, decision, preference, fact), person names detected from stored memories, and date ranges ("today", "yesterday", "last week").
-2. Weighted scoring per memory: 0.35 keyword match + 0.20 person match + 0.20 type match + 0.15 recency (exponential decay) + 0.10 confidence.
+2. Hybrid weighted scoring per memory: 0.30 keyword match + 0.18 person match + 0.15 type match + 0.15 on-device semantic similarity (Apple NaturalLanguage sentence embeddings, cosine distance) + 0.12 recency (exponential decay) + 0.10 confidence.
 3. Top-5 items formatted with their evidence into the system prompt.
 4. The LLM is instructed to answer **only** from that context and to admit gaps; the UI shows the source memories under each answer.
 This keeps token use small, answers citable, and prevents the model from inventing memories.
 
 ## Assumptions & limitations
 - Groq free tier (rate-limited); demo recordings kept short.
-- Retrieval is keyword + metadata + recency scoring; no embeddings yet.
+- Retrieval blends lexical, metadata, recency and on-device sentence embeddings; a dedicated vector index (e.g. sqlite-vec) would scale it further.
 - No speaker diarization — single-speaker transcript assumed.
 - Relative due dates kept as text (`dueText`), not normalized to calendar dates.
 - API key lives in `AppConfig` for prototype speed; Keychain + on-device encryption would be the production path.
 - Simulator microphone depends on host hardware; "Load demo session" and mock mode guarantee a demoable state.
 
 ## With another week
-- Embeddings + hybrid retrieval (sqlite-vec) with reranking.
+- Dedicated vector index (sqlite-vec) + cross-encoder reranking for scale.
 - Speaker diarization → per-person memory and a lightweight people graph.
-- Memory dedup/merge and temporal normalization ("tonight" → real date).
+- Richer memory merging (conflict resolution when a fact changes); temporal normalization and dedup are already implemented at extraction/save time.
 - Commitment lifecycle (open → done) and proactive reminders.
 - Ambient listening behind an explicit privacy budget: on-device voice-activity trigger, retention policy, user-visible capture log.
 

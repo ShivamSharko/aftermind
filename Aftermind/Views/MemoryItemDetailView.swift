@@ -14,6 +14,17 @@ struct MemoryItemDetailView: View {
                         .font(.caption)
                         .foregroundColor(Theme.textSecondary)
                 }
+                
+                if let owner = item.owner {
+                    Label(owner == "user" ? "You own this" : "\(owner) owns this", systemImage: "person.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(owner == "user" ? Theme.accent : Theme.purpleLight)
+                }
+                if let dueDate = item.dueDate {
+                    Label(dueDate.formatted(date: .complete, time: .omitted), systemImage: "calendar")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Theme.accent)
+                }
 
                 Text(item.title)
                     .font(.title2.weight(.bold))

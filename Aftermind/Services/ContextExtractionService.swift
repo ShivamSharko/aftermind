@@ -8,39 +8,45 @@ final class GroqContextExtractionService: ContextExtractionServiceProtocol {
     
     private let llm = LLMClient.shared
     
-    private let systemPrompt = """
-    You are a context extraction engine for a personal memory app called Aftermind.
-    You will receive a raw conversation transcript.
-    Your job is to extract only durable, useful information and discard noise.
-    
-    Rules:
-    1. Identify participants and topics.
-    2. Extract meaningful items (commitments, decisions, tasks, deadlines, preferences, facts, ideas).
-    3. Ignore filler, repeated phrases, and low-value small talk.
-    4. Include evidence snippets from the transcript for each item.
-    5. Assign a confidence score from 0.0 to 1.0.
-    
-    You MUST output ONLY valid JSON matching this exact schema:
-    {
-      "session_summary": "string",
-      "participants": [{ "name": "string", "role": "string" }],
-      "topics": ["string"],
-      "items": [
+    private var systemPrompt: String {
+        let today = Date().formatted(date: .complete, time: .omitted)
+        return """
+        You are a context extraction engine for a personal memory app called Aftermind.
+        You will receive a raw conversation transcript.
+        Your job is to extract only durable, useful information and discard noise.
+
+        Rules:
+        1. Identify participants and topics.
+        2. Extract meaningful items (commitments, decisions, tasks, deadlines, preferences, facts, ideas).
+        3. Ignore filler, repeated phrases, and low-value small talk.
+        4. Include evidence snippets from the transcript for each item.
+        5. Assign a confidence score from 0.0 to 1.0.
+        6. For each item set "owner": who is responsible for it. Use "user" for the person recording, otherwise the person's name, or null if unclear.
+        7. Today's date is: \(today). Resolve relative time expressions ("tonight", "tomorrow", "Friday", "next week") into an absolute ISO date (yyyy-MM-dd) in "due_date". Keep the original spoken words in "due_text". If no time is mentioned, both are null.
+
+        You MUST output ONLY valid JSON matching this exact schema:
         {
-          "type": "commitment" | "task" | "decision" | "fact" | "idea" | "preference",
-          "title": "string",
-          "description": "string",
-          "related_people": ["string"],
-          "due_text": "string or null",
-          "due_date": "string or null",
-          "confidence": 0.9,
-          "evidence": "string from transcript",
-          "status": "string or null",
-          "tags": ["string"]
+          "session_summary": "string",
+          "participants": [{ "name": "string", "role": "string" }],
+          "topics": ["string"],
+          "items": [
+            {
+              "type": "commitment" | "task" | "decision" | "fact" | "idea" | "preference",
+              "title": "string",
+              "description": "string",
+              "owner": "user" | "person name" | null,
+              "related_people": ["string"],
+              "due_text": "string or null",
+              "due_date": "yyyy-MM-dd or null",
+              "confidence": 0.9,
+              "evidence": "string from transcript",
+              "status": "string or null",
+              "tags": ["string"]
+            }
+          ]
         }
-      ]
+        """
     }
-    """
     
     func extract(from transcript: String) async throws -> ExtractedSession {
         let rawJSON = try await llm.complete(systemPrompt: systemPrompt, userMessage: transcript)
@@ -72,6 +78,7 @@ final class MockContextExtractionService: ContextExtractionServiceProtocol {
               "type": "commitment",
               "title": "Send pitch deck to Rahul",
               "description": "User promised to send the latest pitch deck.",
+              "owner": "user",
               "related_people": ["Rahul"],
               "due_text": "tonight",
               "due_date": null,
@@ -84,6 +91,7 @@ final class MockContextExtractionService: ContextExtractionServiceProtocol {
               "type": "fact",
               "title": "Sarah will send the contract",
               "description": "Sarah said she would send the contract by email.",
+              "owner": "Sarah",
               "related_people": ["Sarah"],
               "due_text": "tomorrow",
               "due_date": null,
@@ -96,6 +104,7 @@ final class MockContextExtractionService: ContextExtractionServiceProtocol {
               "type": "task",
               "title": "Follow up with Priya about iOS developer",
               "description": "User needs to contact Priya to hire an iOS developer.",
+              "owner": "user",
               "related_people": ["Priya"],
               "due_text": null,
               "due_date": null,
@@ -108,6 +117,7 @@ final class MockContextExtractionService: ContextExtractionServiceProtocol {
               "type": "decision",
               "title": "Decide on startup direction by Friday",
               "description": "Team needs to make a final go/no-go decision.",
+              "owner": "user",
               "related_people": ["Rahul"],
               "due_text": "Friday",
               "due_date": null,

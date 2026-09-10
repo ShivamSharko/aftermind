@@ -81,16 +81,22 @@ final class ChatRetrievalService {
         }
 
         let now = Date()
+        let queryVector = EmbeddingService.shared.vector(for: query)
         let scored: [RetrievedMemory] = candidates.map { item in
             let keywordScore = self.keywordScore(keywords: intent.keywords, item: item)
             let personScore = (intent.person != nil && item.people.contains(where: { $0.lowercased() == intent.person?.lowercased() })) ? 1.0 : 0.0
             let typeScore = (intent.itemType != nil && item.type == intent.itemType) ? 1.0 : 0.0
             let ageDays = now.timeIntervalSince(item.createdAt) / 86400.0
             let recencyScore = exp(-ageDays / 14.0)
-            let score = 0.35 * keywordScore
-                      + 0.20 * personScore
-                      + 0.20 * typeScore
-                      + 0.15 * recencyScore
+            let semanticScore: Double = {
+                guard let qv = queryVector, let iv = item.embedding else { return 0 }
+                return EmbeddingService.shared.cosine(qv, iv)
+            }()
+            let score = 0.30 * keywordScore
+                      + 0.18 * personScore
+                      + 0.15 * typeScore
+                      + 0.15 * semanticScore
+                      + 0.12 * recencyScore
                       + 0.10 * item.confidence
             return RetrievedMemory(item: item, score: score)
         }

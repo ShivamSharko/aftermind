@@ -259,6 +259,15 @@ struct SessionDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 TypeBadge(type: item.type)
+                if let owner = item.owner {
+                    Text(owner == "user" ? "You" : owner)
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(owner == "user" ? .black : Theme.purpleLight)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(owner == "user" ? Theme.accent : Theme.purpleLight.opacity(0.18))
+                        .clipShape(Capsule())
+                }
                 Spacer()
                 Text("\(Int(item.confidence * 100))%")
                     .font(.caption.weight(.bold))

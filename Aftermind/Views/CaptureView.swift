@@ -18,6 +18,7 @@ struct CaptureView: View {
     @State private var errorMessage: String?
     @State private var savedSession: SessionModel?
     @State private var seedError = false
+    @State private var duplicateCount = 0
 
     enum ProcessingPhase {
         case idle, recording, transcribing, extracting, saved
@@ -75,7 +76,11 @@ struct CaptureView: View {
                                     Circle().fill(Theme.accent).frame(width: 6, height: 6)
                                     Text(item.title).font(.subheadline).foregroundColor(.white.opacity(0.85)).lineLimit(1)
                                     Spacer()
-                                    if let due = item.dueText {
+                                    if let due = item.dueDate {
+                                        Text(due.formatted(date: .abbreviated, time: .omitted))
+                                            .font(.caption2)
+                                            .foregroundColor(Theme.accent)
+                                    } else if let due = item.dueText {
                                         Text(due).font(.caption2).foregroundColor(Theme.textSecondary)
                                     }
                                 }
@@ -132,6 +137,11 @@ struct CaptureView: View {
                                     Text("\(savedSession.items.count) memories extracted")
                                         .font(.caption)
                                         .foregroundColor(Theme.textSecondary)
+                                    if duplicateCount > 0 {
+                                        Text("Skipped \(duplicateCount) duplicate memories already stored.")
+                                            .font(.caption)
+                                            .foregroundColor(Theme.textSecondary)
+                                    }
                                 }
                                 Spacer()
                             }
@@ -287,6 +297,7 @@ struct CaptureView: View {
         transcript = nil
         savedSession = nil
         errorMessage = nil
+        duplicateCount = 0
     }
 
     private func seedDemoSession() {
@@ -318,6 +329,14 @@ struct CaptureView: View {
                 seedError = true
             }
         }
+    }
+
+    private func parseISODate(_ s: String?) -> Date? {
+        guard let s else { return nil }
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f.date(from: s)
     }
 
     private func processPipeline(url: URL) async {
@@ -363,7 +382,18 @@ struct CaptureView: View {
             )
             modelContext.insert(session)
 
+            let existingItems = (try? modelContext.fetch(FetchDescriptor<MemoryItemModel>())) ?? []
             for item in extracted.items {
+                let text = "\(item.title) \(item.description) \(item.evidence)"
+                let vec = EmbeddingService.shared.vector(for: text)
+                if let vec, existingItems.contains(where: { old in
+                    guard let oldVec = old.embedding else { return false }
+                    return EmbeddingService.shared.cosine(vec, oldVec) > 0.93
+                }) {
+                    duplicateCount += 1
+                    continue
+                }
+
                 let memoryItem = MemoryItemModel(
                     type: item.type,
                     title: item.title,
@@ -371,8 +401,11 @@ struct CaptureView: View {
                     people: item.related_people,
                     evidence: item.evidence,
                     confidence: item.confidence,
-                    dueText: item.due_text
+                    dueText: item.due_text,
+                    owner: item.owner,
+                    dueDate: parseISODate(item.due_date)
                 )
+                memoryItem.embedding = vec
                 memoryItem.session = session
                 modelContext.insert(memoryItem)
             }

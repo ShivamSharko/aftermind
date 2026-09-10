@@ -15,6 +15,7 @@ struct Participant: Codable {
 
 struct ExtractedItem: Codable {
     let type: String
+    let owner: String?
     let title: String
     let description: String
     let related_people: [String]
