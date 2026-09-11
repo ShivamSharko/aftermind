@@ -71,7 +71,7 @@ This keeps token use small, answers citable, and prevents the model from inventi
 - **The 2026 bar:** assistants are ranked by memory architecture and privacy model, and by agentic memory (proactively acting on learned history). Aftermind answers with a typed schema, hybrid on-device retrieval, proactive deadline notifications, and planned App Intents actions.
 
 ### Roadmap (2026-informed)
-1. Agentic actions: commitments become Apple Reminders or drafted emails via App Intents.
+1. Deeper App Intents integrations: auto-drafting emails in Apple Mail, creating calendar events, or sending Slack messages based on extracted commitments.
 2. Multilingual transcription via the Whisper language parameter.
 3. Extraction lenses (startup / family / health) adapting Plaud's template model to life context.
 4. Multimodal context (vision + audio).
