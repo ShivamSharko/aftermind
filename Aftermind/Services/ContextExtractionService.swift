@@ -45,7 +45,8 @@ final class GroqContextExtractionService: ContextExtractionServiceProtocol {
     }
     
     func extract(from transcript: String) async throws -> ExtractedSession {
-        let rawJSON = try await llm.complete(systemPrompt: systemPrompt, userMessage: transcript)
+        let fullPrompt = systemPrompt + "\n\nThink step-by-step about what constitutes durable, actionable memory. Explain your extraction decisions."
+        let rawJSON = try await llm.complete(systemPrompt: fullPrompt, userMessage: transcript, jsonMode: true, enableWebSearch: false)
         
         guard let jsonData = rawJSON.data(using: .utf8) else {
             throw LLMError.badResponse

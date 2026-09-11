@@ -3,6 +3,8 @@ import SwiftData
 
 @main
 struct AftermindApp: App {
+    @StateObject private var chatHistory = ChatHistoryService()
+
     init() {
         AppConfig.setup()
     }
@@ -12,5 +14,6 @@ struct AftermindApp: App {
             RootView()
         }
         .modelContainer(for: [SessionModel.self, MemoryItemModel.self])
+        .environmentObject(chatHistory)
     }
 }

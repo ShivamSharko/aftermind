@@ -21,7 +21,7 @@ final class LLMClient {
     
     private init() {}
     
-    func complete(systemPrompt: String, userMessage: String, enableWebSearch: Bool = false) async throws -> String {
+    func complete(systemPrompt: String, userMessage: String, jsonMode: Bool = false, enableWebSearch: Bool = false) async throws -> String {
         let apiKey = AppConfig.groqAPIKey
         guard !apiKey.isEmpty, !apiKey.contains("PASTE") else { throw LLMError.missingKey }
         
@@ -38,12 +38,15 @@ final class LLMClient {
         var requestBody: [String: Any] = [
             "model": enableWebSearch ? AppConfig.chatModel : AppConfig.llmModel,
             "messages": [
-                ["role": "system", "content": systemPrompt + "\n\nThink step-by-step about what constitutes durable, actionable memory."],
+                ["role": "system", "content": systemPrompt],
                 ["role": "user", "content": userMessage]
             ],
-            "response_format": ["type": "json_object"],
             "temperature": 0.2
         ]
+        
+        if jsonMode {
+            requestBody["response_format"] = ["type": "json_object"]
+        }
         
         if enableWebSearch {
             requestBody["tools"] = [["type": "web_search"]]

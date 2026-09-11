@@ -37,7 +37,10 @@ final class MemoryItemModel {
     var embedding: [Double]?
     var tags: [String] = []
     var status: String?
-    var isCompleted: Bool = false
+    var isCompleted: Bool {
+        get { status == "done" || status == "completed" }
+        set { status = newValue ? "completed" : "open" }
+    }
     var createdAt: Date = Date()
     
     var session: SessionModel?
@@ -68,7 +71,6 @@ final class MemoryItemModel {
         self.embedding = embedding
         self.tags = tags
         self.status = status
-        self.isCompleted = (status == "done" || status == "completed")
     }
 }
 

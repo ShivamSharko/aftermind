@@ -13,39 +13,45 @@ struct MemoryListView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 22) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Memory")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundColor(.white)
-                            Text("\(sessions.count) sessions • \(totalItems) memories")
-                                .font(.subheadline)
-                                .foregroundColor(Theme.textSecondary)
-                        }
-                        Spacer()
-                        CircleIconButton(systemName: "square.and.arrow.up") {
-                            exportURL = makeExportFile()
-                            showExportSheet = true
-                        }
-                        CircleIconButton(systemName: "sparkles", action: seedDemoSession)
+            VStack(alignment: .leading, spacing: 22) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Memory")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.white)
+                        Text("\(sessions.count) sessions • \(totalItems) memories")
+                            .font(.subheadline)
+                            .foregroundColor(Theme.textSecondary)
                     }
-                    .padding(.top, 12)
+                    Spacer()
+                    CircleIconButton(systemName: "square.and.arrow.up") {
+                        exportURL = makeExportFile()
+                        showExportSheet = true
+                    }
+                    CircleIconButton(systemName: "sparkles", action: seedDemoSession)
+                }
+                .padding(.top, 12)
+                .padding(.horizontal, 24)
 
+                List {
                     if sessions.isEmpty {
                         emptyCard
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     } else {
-                        featuredCard(sessions[0])
-                        SectionHeader(title: "Recent sessions")
-                        VStack(spacing: 12) {
-                            ForEach(sessions) { session in
+                        Section {
+                            featuredCard(sessions[0])
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        }
+                        Section("Recent sessions") {
+                            ForEach(sessions.dropFirst()) { session in
                                 NavigationLink {
                                     SessionDetailView(session: session)
                                 } label: {
                                     sessionRow(session)
                                 }
-                                .buttonStyle(PressableStyle())
+                                .listRowBackground(Theme.card)
                                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                     Button(role: .destructive) {
                                         sessionPendingDeletion = session
@@ -57,8 +63,8 @@ struct MemoryListView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 110)
+                .scrollContentBackground(.hidden)
+                .listStyle(.plain)
             }
             .confirmationDialog(
                 "Delete this session and all its memories?",
@@ -252,8 +258,8 @@ struct SessionDetailView: View {
     let session: SessionModel
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 22) {
+        List {
+            Section {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(session.createdAt.formatted(date: .complete, time: .shortened))
                         .font(.caption.weight(.semibold))
@@ -268,8 +274,12 @@ struct SessionDetailView: View {
                     LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: RoundedRectangle(cornerRadius: 26)
                 )
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
 
-                if !session.topics.isEmpty {
+            if !session.topics.isEmpty {
+                Section {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(session.topics, id: \.self) { topic in
@@ -278,36 +288,39 @@ struct SessionDetailView: View {
                         }
                     }
                 }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
 
-                SectionHeader(title: "Extracted items (\(session.items.count))")
-                VStack(spacing: 12) {
-                    ForEach(session.items) { item in
-                        NavigationLink {
-                            MemoryItemDetailView(item: item)
+            Section("Extracted items (\(session.items.count))") {
+                ForEach(session.items) { item in
+                    NavigationLink {
+                        MemoryItemDetailView(item: item)
+                    } label: {
+                        itemCard(item)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            itemPendingDeletion = item
                         } label: {
-                            itemCard(item)
-                        }
-                        .buttonStyle(PressableStyle())
-                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                itemPendingDeletion = item
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button {
-                                item.isCompleted.toggle()
-                                try? modelContext.save()
-                            } label: {
-                                Label(item.isCompleted ? "Reopen" : "Done", systemImage: item.isCompleted ? "arrow.uturn.backward" : "checkmark")
-                            }
-                            .tint(item.isCompleted ? .orange : Theme.accent)
+                            Label("Delete", systemImage: "trash")
                         }
                     }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button {
+                            item.isCompleted.toggle()
+                            try? modelContext.save()
+                        } label: {
+                            Label(item.isCompleted ? "Reopen" : "Done", systemImage: item.isCompleted ? "arrow.uturn.backward" : "checkmark")
+                        }
+                        .tint(item.isCompleted ? .orange : Theme.accent)
+                    }
                 }
+            }
 
-                SectionHeader(title: "Raw transcript")
+            Section("Raw transcript") {
                 Text(session.transcript)
                     .font(.callout)
                     .foregroundColor(Theme.textSecondary)
@@ -315,9 +328,11 @@ struct SessionDetailView: View {
                     .padding(16)
                     .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
+        .scrollContentBackground(.hidden)
+        .listStyle(.plain)
         .confirmationDialog(
             "Delete this memory?",
             isPresented: Binding(

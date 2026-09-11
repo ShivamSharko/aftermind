@@ -4,6 +4,7 @@ import SwiftData
 struct MemoryItemDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var reminderAdded = false
+    @State private var hasMarkedInaccurate = false
     let item: MemoryItemModel
 
     private var isActionable: Bool { item.type == "commitment" || item.type == "task" }
@@ -146,6 +147,7 @@ struct MemoryItemDetailView: View {
                 Button(role: .destructive) {
                     item.status = "disputed"
                     item.confidence = max(0.1, item.confidence * 0.5)
+                    hasMarkedInaccurate = true
                     try? modelContext.save()
                 } label: {
                     Label(item.status == "disputed" ? "Marked as inaccurate - tap evidence to review" : "Mark as inaccurate", systemImage: "exclamationmark.triangle")
@@ -153,6 +155,7 @@ struct MemoryItemDetailView: View {
                         .foregroundColor(Color(red: 1.0, green: 0.45, blue: 0.50))
                 }
                 .buttonStyle(PressableStyle())
+                .disabled(hasMarkedInaccurate || item.status == "disputed")
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)

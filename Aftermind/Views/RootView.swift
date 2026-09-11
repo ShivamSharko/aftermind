@@ -18,15 +18,13 @@ struct RootView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Group {
-                switch selected {
-                case .capture: CaptureView()
-                case .memory: MemoryListView()
-                case .chat: ChatView()
-                }
+            ZStack {
+                CaptureView().opacity(selected == .capture ? 1 : 0)
+                MemoryListView().opacity(selected == .memory ? 1 : 0)
+                ChatView().opacity(selected == .chat ? 1 : 0)
             }
+            .animation(.easeInOut(duration: 0.2), value: selected)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .transition(.opacity)
 
             FloatingTabBar(selected: $selected)
                 .padding(.horizontal, 28)

@@ -1,21 +1,10 @@
 import SwiftUI
 import SwiftData
 
-struct ChatMessage: Identifiable {
-    let id = UUID()
-    let role: Role
-    let content: String
-    var sources: [String] = []
-
-    enum Role {
-        case user, assistant
-    }
-}
-
 struct ChatView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var chatHistory: ChatHistoryService
     @State private var inputText = ""
-    @State private var messages: [ChatMessage] = []
     @State private var isLoading = false
 
     var body: some View {
@@ -37,7 +26,7 @@ struct ChatView: View {
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
                         LazyVStack(alignment: .leading, spacing: 14) {
-                            ForEach(messages) { message in
+                            ForEach(chatHistory.messages) { message in
                                 MessageBubble(message: message)
                                     .id(message.id)
                             }
@@ -57,8 +46,8 @@ struct ChatView: View {
                         .padding(.vertical, 12)
                     }
                     .scrollDismissesKeyboard(.interactively)
-                    .onChange(of: messages.count) { _, _ in
-                        if let lastId = messages.last?.id {
+                    .onChange(of: chatHistory.messages.count) { _, _ in
+                        if let lastId = chatHistory.messages.last?.id {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { proxy.scrollTo(lastId, anchor: .bottom) }
                         }
                     }
@@ -96,8 +85,8 @@ struct ChatView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .onAppear {
-                if messages.isEmpty {
-                    messages.append(ChatMessage(role: .assistant, content: "Hi! I'm Aftermind. Try: “What did I promise to do?” or “What did I discuss with Rahul last week?”"))
+                if chatHistory.messages.isEmpty {
+                    chatHistory.append(ChatMessage(role: .assistant, content: "Hi! I'm Aftermind. Try: “What did I promise to do?” or “What did I discuss with Rahul last week?”"))
                 }
             }
         }
@@ -107,7 +96,7 @@ struct ChatView: View {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        messages.append(ChatMessage(role: .user, content: text))
+        chatHistory.append(ChatMessage(role: .user, content: text))
         inputText = ""
         isLoading = true
 
@@ -119,9 +108,9 @@ struct ChatView: View {
 
             do {
                 let response = try await AppConfig.chatAnswerService.answer(question: text, context: contextString)
-                messages.append(ChatMessage(role: .assistant, content: response, sources: sourceTitles))
+                chatHistory.append(ChatMessage(role: .assistant, content: response, sources: sourceTitles))
             } catch {
-                messages.append(ChatMessage(role: .assistant, content: "Sorry, I encountered an error: \(error.localizedDescription)"))
+                chatHistory.append(ChatMessage(role: .assistant, content: "Sorry, I encountered an error: \(error.localizedDescription)"))
             }
             isLoading = false
         }
