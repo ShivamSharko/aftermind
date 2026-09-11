@@ -6,6 +6,8 @@ struct MemoryListView: View {
     @Query(sort: \SessionModel.createdAt, order: .reverse) private var sessions: [SessionModel]
     @State private var seedError = false
     @State private var sessionPendingDeletion: SessionModel?
+    @State private var exportURL: URL?
+    @State private var showExportSheet = false
 
     private var totalItems: Int { sessions.reduce(0) { $0 + $1.items.count } }
 
@@ -23,6 +25,10 @@ struct MemoryListView: View {
                                 .foregroundColor(Theme.textSecondary)
                         }
                         Spacer()
+                        CircleIconButton(systemName: "square.and.arrow.up") {
+                            exportURL = makeExportFile()
+                            showExportSheet = true
+                        }
                         CircleIconButton(systemName: "sparkles", action: seedDemoSession)
                     }
                     .padding(.top, 12)
@@ -74,6 +80,29 @@ struct MemoryListView: View {
             .toolbar(.hidden, for: .navigationBar)
             .alert("Could not load demo session", isPresented: $seedError) {
                 Button("OK", role: .cancel) { }
+            }
+            .sheet(isPresented: $showExportSheet) {
+                if let exportURL {
+                    VStack(spacing: 16) {
+                        Text("Memory export ready")
+                            .font(.headline)
+                        ShareLink(item: exportURL) {
+                            Text("Share aftermind-export.json")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.black)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Theme.accent)
+                                .clipShape(Capsule())
+                        }
+                        Button("Done") {
+                            showExportSheet = false
+                            exportURL = nil
+                        }
+                    }
+                    .padding(24)
+                    .presentationDetents([.height(240)])
+                }
             }
         }
     }
@@ -184,6 +213,36 @@ struct MemoryListView: View {
                 seedError = true
             }
         }
+    }
+
+    private func makeExportFile() -> URL {
+        struct ExportItem: Encodable {
+            let type: String; let title: String; let detail: String
+            let owner: String?; let people: [String]
+            let dueText: String?; let dueDate: Date?
+            let status: String?; let tags: [String]
+            let confidence: Double; let evidence: String
+        }
+        struct ExportSession: Encodable {
+            let createdAt: Date; let summary: String; let topics: [String]; let items: [ExportItem]
+        }
+        let payload: [ExportSession] = sessions.map { s in
+            ExportSession(
+                createdAt: s.createdAt,
+                summary: s.summary,
+                topics: s.topics,
+                items: s.items.map { i in
+                    ExportItem(type: i.type, title: i.title, detail: i.detail, owner: i.owner, people: i.people, dueText: i.dueText, dueDate: i.dueDate, status: i.status, tags: i.tags, confidence: i.confidence, evidence: i.evidence)
+                }
+            )
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let data = (try? encoder.encode(payload)) ?? Data()
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("aftermind-export.json")
+        try? data.write(to: url)
+        return url
     }
 }
 

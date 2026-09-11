@@ -8,7 +8,7 @@ A personal context notetaker for iOS. Aftermind listens to a conversation, trans
 ## What I built
 The core loop, end to end: **Record → Transcribe → Clean/Structure → Store → Chat**
 - **Capture tab:** microphone recording with live timer, permission handling, and a visible pipeline (Transcribing → Extracting → Saved).
-- **Memory tab:** sessions → typed memory items with people, due info, evidence snippets and confidence scores. A "Load demo session" button guarantees a demoable state. Swipe-to-delete with confirmation on sessions and items gives full user control over retained data.
+- **Memory tab:** sessions → typed memory items with people, due info, evidence snippets and confidence scores. A "Load demo session" button guarantees a demoable state. Swipe-to-delete with confirmation on sessions and items gives full user control over retained data. A one-tap JSON export guarantees memory portability — your context is never locked in.
 - **Chat tab:** grounded Q&A over structured memory ("What did I promise to do?", "What did Sarah say she would send?"), with source citations under each answer.
 
 ## Product decisions
@@ -61,12 +61,20 @@ This keeps token use small, answers citable, and prevents the model from inventi
 - **Failure recovery:** failed transcriptions retain the audio on-device and expose a one-tap "Retry transcription" action from the Capture screen, so no recording is ever lost.
 - **Unified demo seeding:** "Load demo session" runs the same pipeline as real capture (on-device embeddings, ownership, resolved dates, notifications), so demo data exercises every retrieval path equally.
 
-## With another week
-- Dedicated vector index (sqlite-vec) + cross-encoder reranking for scale.
-- Speaker diarization → per-person memory and a lightweight people graph.
-- Richer memory merging (conflict resolution when a fact changes); temporal normalization and dedup are already implemented at extraction/save time.
-- Commitment lifecycle (open → done) and proactive reminders.
-- Ambient listening behind an explicit privacy budget: on-device voice-activity trigger, retention policy, user-visible capture log.
+## Competitive landscape (verified September 2026)
+- **Omi:** open-source always-on pendant that turns conversations into notes, tasks and memories; strongest at passive recall but criticized for transcription accuracy. Aftermind offers the same auto-task value (Focus board + deadline notifications) with user-controlled capture and evidence-backed, confidence-scored memories.
+- **Limitless:** sunsetting Rewind and no longer selling the Pendant to new customers — public proof that hardware-dependent memory is a fragile bet. Aftermind is software-first: no hardware, no subscription, no stranded data.
+- **Bee (now Amazon-owned):** budget ambient capture; consolidation makes data sovereignty the key 2026 evaluation axis. Aftermind keeps every memory on-device with full delete and JSON export control.
+- **Plaud NotePin S:** the work-output leader (112 languages, speaker labels, 10,000+ templates, cross-surface capture). Aftermind borrows the pattern: semantic ownership instead of paid diarization, extraction lenses and multilingual transcription on the roadmap.
+- **Multimodal wearables (e.g., Ray-Ban Meta Gen 2):** vision + audio context is the next frontier; on Aftermind's roadmap.
+- **The 2026 bar:** assistants are ranked by memory architecture and privacy model, and by agentic memory (proactively acting on learned history). Aftermind answers with a typed schema, hybrid on-device retrieval, proactive deadline notifications, and planned App Intents actions.
+
+### Roadmap (2026-informed)
+1. Agentic actions: commitments become Apple Reminders or drafted emails via App Intents.
+2. Multilingual transcription via the Whisper language parameter.
+3. Extraction lenses (startup / family / health) adapting Plaud's template model to life context.
+4. Multimodal context (vision + audio).
+5. Ambient capture behind an explicit privacy budget.
 
 ## Setup
 1. **Zero-key demo mode (default):** with `useMockTranscription = true`, transcription, extraction AND chat answering are all mocked behind protocols, so the entire product is explorable with no accounts or keys.
