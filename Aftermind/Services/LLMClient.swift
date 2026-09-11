@@ -48,10 +48,7 @@ final class LLMClient {
             requestBody["response_format"] = ["type": "json_object"]
         }
         
-        if enableWebSearch {
-            requestBody["tools"] = [["type": "web_search"]]
-        }
-        
+
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         
         let (data, response) = try await URLSession.shared.data(for: request)

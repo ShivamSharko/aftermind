@@ -32,7 +32,7 @@ The schema ships six item types (commitment, task, decision, fact, idea, prefere
 Relationships: items cascade-delete with their session; people and topics connect items across sessions, surfaced in the Explore tab as a toggleable relationship graph (group by People or Topics).
 
 ## Technical architecture
-Audio (AVAudioRecorder) → TranscriptionService (Groq whisper-large-v3) → ContextExtractionService (Groq Compound Mini with integrated reasoning, JSON mode for structured extraction) → SwiftData → ChatRetrievalService → grounded LLM answer with Groq Compound (free-text mode with reasoning + live web search for enriched context).
+Audio (AVAudioRecorder) → TranscriptionService (Groq whisper-large-v3) → ContextExtractionService (Groq Compound Mini with integrated reasoning, JSON mode for structured extraction) → SwiftData → ChatRetrievalService → grounded LLM answer with Groq Compound (reasoning-first orchestration with built-in search for enriched context).
 - SwiftUI + SwiftData (iOS 17), async/await throughout, protocol-based services with Groq + Mock implementations, typed errors surfaced as alerts and UI states, extraction retried once with an "incomplete session" fallback so no recording is ever lost.
 
 ## How chat retrieves context
@@ -83,7 +83,7 @@ This keeps token use small, answers citable, and prevents the model from inventi
 3. **Agentic memory on day one:** commitments and tasks become native Apple Reminders (with the resolved due-date as alarm) or drafted follow-up messages in one tap - the 2026 bar for personal AI, which note apps only promise inside their own walled gardens.
 4. **Semantic ownership without hardware:** "You" vs "Sarah" responsibility badges inferred from conversational context, with no paid diarization and no pendant.
 5. **Data-sovereignty trio:** local-first storage, full deletion with confirmation, and one-tap JSON export - portability became a consumer requirement after Limitless sunset stranded user data and Bee was acquired by Amazon.
-6. **Reasoning-first AI layer:** uses Groq's 2026 Compound Systems with separate modes — JSON mode for structured extraction (forces valid schema), free-text mode for chat answers (enables web search enrichment). Extraction explains its decisions; chat answers can pull in live web context. No memory app uses compound reasoning architectures with mode-aware API calls.
+6. **Reasoning-first AI layer:** uses Groq's 2026 Compound Systems with separate modes — JSON mode for structured extraction (forces valid schema), free-text mode for chat answers (the Compound system's built-in search and reasoning enrich answers). Extraction explains its decisions; chat answers can pull in live web context. No memory app uses compound reasoning architectures with mode-aware API calls.
 
 ### Still missing industry-wide (our next bets)
 - Bystander consent mode for any future ambient capture (visible recording notice, consent capture, retention window).
