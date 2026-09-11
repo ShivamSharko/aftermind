@@ -2,14 +2,14 @@ import SwiftUI
 import UIKit
 
 enum AppTab: Int, CaseIterable {
-    case capture, memory, chat, people
+    case capture, memory, chat, explore
 
     var icon: String {
         switch self {
         case .capture: return "mic.fill"
         case .memory: return "square.stack.3d.up.fill"
         case .chat: return "bubble.left.and.bubble.right.fill"
-        case .people: return "person.2.fill"
+        case .explore: return "square.grid.2x2.fill"
         }
     }
 }
@@ -23,7 +23,7 @@ struct RootView: View {
                 CaptureView().opacity(selected == .capture ? 1 : 0)
                 MemoryListView().opacity(selected == .memory ? 1 : 0)
                 ChatView().opacity(selected == .chat ? 1 : 0)
-                PeopleView().opacity(selected == .people ? 1 : 0)
+                ExploreView().opacity(selected == .explore ? 1 : 0)
             }
             .animation(.easeInOut(duration: 0.2), value: selected)
             .frame(maxWidth: .infinity, maxHeight: .infinity)

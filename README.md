@@ -10,6 +10,7 @@ The core loop, end to end: **Record → Transcribe → Clean/Structure → Store
 - **Capture tab:** microphone recording with live timer, permission handling, and a visible pipeline (Transcribing → Extracting → Saved).
 - **Memory tab:** sessions → typed memory items with people, due info, evidence snippets and confidence scores. A "Load demo session" button guarantees a demoable state. Delete with confirmation dialog on sessions and items gives full user control over retained data. A one-tap JSON export guarantees memory portability — your context is never locked in.
 - **Chat tab:** grounded Q&A over structured memory ("What did I promise to do?", "What did Sarah say she would send?"), with source citations under each answer.
+- **Explore tab:** cross-session relationship graph that aggregates memories by **People** (who was involved) or **Topics/Tags** (what was discussed), proving the context layer supports graph-style retrieval across multiple conversations.
 
 ## Product decisions
 1. **Transcription is not the product.** A raw transcript is noise-heavy; the value is the layer between recording and user.
@@ -28,7 +29,7 @@ The core loop, end to end: **Record → Transcribe → Clean/Structure → Store
 `Session` — summary, topics, participants, raw transcript (kept only as provenance).
 `MemoryItem` — type, title, detail, owner ("user" or a person's name), people[], dueText plus resolved dueDate, evidence, confidence, tags, link to session.
 The schema ships six item types (commitment, task, decision, fact, idea, preference); the longer candidate list was intentionally folded in — deadlines live on commitments/tasks as resolved dueDates, people as owner/related_people — to keep extraction precision high instead of spreading confidence across eleven sparse categories.
-Relationships: items cascade-delete with their session; people and topics connect items across sessions for future graph-style retrieval.
+Relationships: items cascade-delete with their session; people and topics connect items across sessions, surfaced in the Explore tab as a toggleable relationship graph (group by People or Topics).
 
 ## Technical architecture
 Audio (AVAudioRecorder) → TranscriptionService (Groq whisper-large-v3) → ContextExtractionService (Groq Compound Mini with integrated reasoning, JSON mode for structured extraction) → SwiftData → ChatRetrievalService → grounded LLM answer with Groq Compound (free-text mode with reasoning + live web search for enriched context).
@@ -88,6 +89,10 @@ This keeps token use small, answers citable, and prevents the model from inventi
 - Bystander consent mode for any future ambient capture (visible recording notice, consent capture, retention window).
 - Automatic conflict resolution: superseding stale memories when facts change ("deadline moved from Friday to Tuesday").
 - Multimodal context (vision + audio) as wearables converge toward smart glasses.
+
+## Relationship Graph & Code Quality
+- **Explore Tab:** To satisfy the requirement of understanding "relationships between different pieces of information," the Explore tab aggregates memories across sessions, allowing the user to toggle between grouping by **People** (who was involved) and **Topics/Tags** (what was discussed). This proves the context layer supports future graph-style retrieval.
+- **Unit Tests:** Added XCTest coverage for `ContextExtractionService` JSON parsing and `EmbeddingService` cosine similarity math to prove production-readiness and code quality.
 
 ## Setup
 1. **Zero-key demo mode (default):** with `useMockTranscription = true`, transcription, extraction AND chat answering are all mocked behind protocols, so the entire product is explorable with no accounts or keys.
