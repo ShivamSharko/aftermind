@@ -19,6 +19,8 @@ struct CaptureView: View {
     @State private var savedSession: SessionModel?
     @State private var seedError = false
     @State private var duplicateCount = 0
+    @State private var showSettings = false
+    @State private var tempAPIKey = ""
 
     enum ProcessingPhase {
         case idle, recording, transcribing, extracting, saved
@@ -38,6 +40,10 @@ struct CaptureView: View {
                                 .foregroundColor(.white)
                         }
                         Spacer()
+                        CircleIconButton(systemName: "gearshape.fill") {
+                            tempAPIKey = AppConfig.groqAPIKey
+                            showSettings = true
+                        }
                         CircleIconButton(systemName: "sparkles", action: seedDemoSession)
                     }
                     .padding(.top, 12)
@@ -138,7 +144,7 @@ struct CaptureView: View {
                                         .font(.caption)
                                         .foregroundColor(Theme.textSecondary)
                                     if duplicateCount > 0 {
-                                        Text("Skipped \(duplicateCount) duplicate memories already stored.")
+                                        Text("Skipped \(duplicateCount) duplicate memories (semantic dedup).")
                                             .font(.caption)
                                             .foregroundColor(Theme.textSecondary)
                                     }
@@ -172,6 +178,15 @@ struct CaptureView: View {
             }
             .alert("Could not load demo session", isPresented: $seedError) {
                 Button("OK", role: .cancel) { }
+            }
+            .alert("Settings", isPresented: $showSettings) {
+                TextField("Groq API Key", text: $tempAPIKey)
+                Button("Cancel", role: .cancel) { }
+                Button("Save") {
+                    AppConfig.groqAPIKey = tempAPIKey
+                }
+            } message: {
+                Text("Enter your Groq API key. It will be stored securely in the iOS Keychain.")
             }
         }
     }
@@ -408,6 +423,7 @@ struct CaptureView: View {
                 memoryItem.embedding = vec
                 memoryItem.session = session
                 modelContext.insert(memoryItem)
+                NotificationService.schedule(for: memoryItem)
             }
 
             try modelContext.save()

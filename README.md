@@ -48,6 +48,12 @@ This keeps token use small, answers citable, and prevents the model from inventi
 - API key lives in `AppConfig` for prototype speed; Keychain + on-device encryption would be the production path.
 - Simulator microphone depends on host hardware; "Load demo session" and mock mode guarantee a demoable state.
 
+## Advanced Engineering Features
+- **Semantic Deduplication & Hybrid Search:** Uses Apple's on-device `NaturalLanguage` sentence embeddings to prevent duplicate memories on save and power semantic chat retrieval (no cloud vector DB needed).
+- **Temporal Normalization:** The LLM resolves relative dates ("Friday") into absolute ISO dates, enabling native iOS local notifications for proactive reminders.
+- **Semantic Diarization (Ownership):** Instead of relying on expensive audio diarization APIs, the extraction prompt infers task ownership ("user" vs "Sarah") directly from conversational context.
+- **Security:** API keys are stored securely in the iOS Keychain, not in plain text.
+
 ## With another week
 - Dedicated vector index (sqlite-vec) + cross-encoder reranking for scale.
 - Speaker diarization → per-person memory and a lightweight people graph.

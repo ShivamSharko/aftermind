@@ -3,7 +3,13 @@ import Foundation
 enum AppConfig {
     /// Groq API key (free tier). Get one at https://console.groq.com/keys
     /// WARNING: never commit your real key to GitHub.
-    static let groqAPIKey = "PASTE_YOUR_GROQ_API_KEY_HERE"
+    private static let keychainKey = "groq_api_key"
+    static var groqAPIKey: String {
+        get { KeychainHelper.load(key: keychainKey) ?? "PASTE_YOUR_GROQ_API_KEY_HERE" }
+        set { KeychainHelper.save(key: keychainKey, value: newValue) }
+    }
+    
+    static func setup() { NotificationService.requestPermission() }
 
     /// Models hosted for free on Groq
     static let transcriptionModel = "whisper-large-v3"

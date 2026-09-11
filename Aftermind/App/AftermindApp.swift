@@ -3,6 +3,10 @@ import SwiftData
 
 @main
 struct AftermindApp: App {
+    init() {
+        AppConfig.setup()
+    }
+    
     var body: some Scene {
         WindowGroup {
             RootView()

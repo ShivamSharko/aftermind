@@ -12,19 +12,14 @@ final class GroqContextExtractionService: ContextExtractionServiceProtocol {
         let today = Date().formatted(date: .complete, time: .omitted)
         return """
         You are a context extraction engine for a personal memory app called Aftermind.
-        You will receive a raw conversation transcript.
-        Your job is to extract only durable, useful information and discard noise.
-
+        Today's date is: \(today).
+        Extract durable information and discard noise.
         Rules:
         1. Identify participants and topics.
-        2. Extract meaningful items (commitments, decisions, tasks, deadlines, preferences, facts, ideas).
-        3. Ignore filler, repeated phrases, and low-value small talk.
-        4. Include evidence snippets from the transcript for each item.
-        5. Assign a confidence score from 0.0 to 1.0.
-        6. For each item set "owner": who is responsible for it. Use "user" for the person recording, otherwise the person's name, or null if unclear.
-        7. Today's date is: \(today). Resolve relative time expressions ("tonight", "tomorrow", "Friday", "next week") into an absolute ISO date (yyyy-MM-dd) in "due_date". Keep the original spoken words in "due_text". If no time is mentioned, both are null.
-
-        You MUST output ONLY valid JSON matching this exact schema:
+        2. Extract commitments, tasks, decisions, facts, ideas.
+        3. "owner": Who is responsible? Use "user" for the recorder, otherwise the person's name, or null.
+        4. "due_date": Resolve relative time ("Friday", "tomorrow") into an absolute ISO date (yyyy-MM-dd). Keep original words in "due_text".
+        5. Output ONLY valid JSON matching this schema:
         {
           "session_summary": "string",
           "participants": [{ "name": "string", "role": "string" }],
@@ -34,12 +29,12 @@ final class GroqContextExtractionService: ContextExtractionServiceProtocol {
               "type": "commitment" | "task" | "decision" | "fact" | "idea" | "preference",
               "title": "string",
               "description": "string",
-              "owner": "user" | "person name" | null,
+              "owner": "user" | "name" | null,
               "related_people": ["string"],
               "due_text": "string or null",
               "due_date": "yyyy-MM-dd or null",
               "confidence": 0.9,
-              "evidence": "string from transcript",
+              "evidence": "string",
               "status": "string or null",
               "tags": ["string"]
             }
@@ -81,7 +76,7 @@ final class MockContextExtractionService: ContextExtractionServiceProtocol {
               "owner": "user",
               "related_people": ["Rahul"],
               "due_text": "tonight",
-              "due_date": null,
+              "due_date": "2026-09-12",
               "confidence": 0.95,
               "evidence": "I'll send you the pitch deck tonight.",
               "status": "open",
