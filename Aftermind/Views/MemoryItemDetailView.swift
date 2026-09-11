@@ -77,6 +77,27 @@ struct MemoryItemDetailView: View {
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+
+                if !item.tags.isEmpty {
+                    SectionHeader(title: "Tags")
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(item.tags, id: \.self) { tag in
+                                PillChip(title: tag, isSelected: false)
+                            }
+                        }
+                    }
+                }
+
+                if let status = item.status {
+                    SectionHeader(title: "Status")
+                    Label(status.capitalized, systemImage: item.isCompleted ? "checkmark.circle.fill" : "circle.dashed")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(item.isCompleted ? Theme.accent : Theme.textSecondary)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)

@@ -8,7 +8,7 @@ A personal context notetaker for iOS. Aftermind listens to a conversation, trans
 ## What I built
 The core loop, end to end: **Record → Transcribe → Clean/Structure → Store → Chat**
 - **Capture tab:** microphone recording with live timer, permission handling, and a visible pipeline (Transcribing → Extracting → Saved).
-- **Memory tab:** sessions → typed memory items with people, due info, evidence snippets and confidence scores. A "Load demo session" button guarantees a demoable state.
+- **Memory tab:** sessions → typed memory items with people, due info, evidence snippets and confidence scores. A "Load demo session" button guarantees a demoable state. Swipe-to-delete with confirmation on sessions and items gives full user control over retained data.
 - **Chat tab:** grounded Q&A over structured memory ("What did I promise to do?", "What did Sarah say she would send?"), with source citations under each answer.
 
 ## Product decisions
@@ -27,6 +27,7 @@ The core loop, end to end: **Record → Transcribe → Clean/Structure → Store
 ## Context schema
 `Session` — summary, topics, participants, raw transcript (kept only as provenance).
 `MemoryItem` — type, title, detail, owner ("user" or a person's name), people[], dueText plus resolved dueDate, evidence, confidence, tags, link to session.
+The schema ships six item types (commitment, task, decision, fact, idea, preference); the longer candidate list was intentionally folded in — deadlines live on commitments/tasks as resolved dueDates, people as owner/related_people — to keep extraction precision high instead of spreading confidence across eleven sparse categories.
 Relationships: items cascade-delete with their session; people and topics connect items across sessions for future graph-style retrieval.
 
 ## Technical architecture
@@ -43,6 +44,7 @@ This keeps token use small, answers citable, and prevents the model from inventi
 ## Assumptions & limitations
 - Groq free tier (rate-limited); demo recordings kept short.
 - Retrieval blends lexical, metadata, recency and on-device sentence embeddings; a dedicated vector index (e.g. sqlite-vec) would scale it further.
+- Retrieval scores the 50 most recent memories per query; a dedicated vector index would remove this cap.
 - No speaker diarization — single-speaker transcript assumed.
 - Relative due dates kept as text (`dueText`), not normalized to calendar dates.
 - API keys are entered via the in-app Settings sheet and stored in the iOS Keychain; no secrets ship with the repository.
@@ -56,6 +58,7 @@ This keeps token use small, answers citable, and prevents the model from inventi
 - **Temporal Normalization:** The LLM resolves relative dates ("Friday") into absolute ISO dates, enabling native iOS local notifications for proactive reminders.
 - **Semantic Diarization (Ownership):** Instead of relying on expensive audio diarization APIs, the extraction prompt infers task ownership ("user" vs "Sarah") directly from conversational context.
 - **Security:** API keys are stored securely in the iOS Keychain, not in plain text.
+- **Failure recovery:** failed transcriptions retain the audio on-device and expose a one-tap "Retry transcription" action from the Capture screen, so no recording is ever lost.
 - **Unified demo seeding:** "Load demo session" runs the same pipeline as real capture (on-device embeddings, ownership, resolved dates, notifications), so demo data exercises every retrieval path equally.
 
 ## With another week

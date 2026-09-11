@@ -148,6 +148,20 @@ struct CaptureView: View {
                                             .font(.caption)
                                             .foregroundColor(Theme.textSecondary)
                                     }
+                                    if let path = savedSession.audioPath, savedSession.transcript.isEmpty {
+                                        Button {
+                                            Task { await retryTranscription(session: savedSession, path: path) }
+                                        } label: {
+                                            Label("Retry transcription", systemImage: "arrow.clockwise")
+                                                .font(.subheadline.weight(.bold))
+                                                .foregroundColor(.black)
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 10)
+                                                .background(Theme.accent)
+                                                .clipShape(Capsule())
+                                        }
+                                        .buttonStyle(PressableStyle())
+                                    }
                                 }
                                 Spacer()
                             }
@@ -329,12 +343,12 @@ struct CaptureView: View {
         }
     }
 
-    private func parseISODate(_ s: String?) -> Date? {
-        guard let s else { return nil }
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        return f.date(from: s)
+    private func retryTranscription(session: SessionModel, path: String) async {
+        let url = URL(fileURLWithPath: path)
+        modelContext.delete(session)
+        try? modelContext.save()
+        savedSession = nil
+        await processPipeline(url: url)
     }
 
     private func retainAudio(_ url: URL) -> String? {
@@ -416,7 +430,7 @@ struct CaptureView: View {
                     confidence: item.confidence,
                     dueText: item.due_text,
                     owner: item.owner,
-                    dueDate: parseISODate(item.due_date),
+                    dueDate: DateParsing.isoDate(item.due_date),
                     tags: item.tags,
                     status: item.status
                 )

@@ -4,6 +4,12 @@ import SwiftData
 enum DemoSeedService {
     @MainActor
     static func seed(into modelContext: ModelContext) async throws -> SessionModel {
+        let existingDescriptor = FetchDescriptor<SessionModel>(
+            predicate: #Predicate<SessionModel> { $0.transcript == "Demo session loaded for testing and demonstration." }
+        )
+        if let existing = try? modelContext.fetch(existingDescriptor), let first = existing.first {
+            return first
+        }
         let extracted = try await MockContextExtractionService().extract(from: "demo")
         let session = SessionModel(
             createdAt: Date(),
@@ -24,7 +30,7 @@ enum DemoSeedService {
                 confidence: item.confidence,
                 dueText: item.due_text,
                 owner: item.owner,
-                dueDate: parseISODate(item.due_date),
+                dueDate: DateParsing.isoDate(item.due_date),
                 embedding: vec,
                 tags: item.tags,
                 status: item.status
@@ -35,14 +41,6 @@ enum DemoSeedService {
         }
         try modelContext.save()
         return session
-    }
-
-    private static func parseISODate(_ s: String?) -> Date? {
-        guard let s else { return nil }
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        return f.date(from: s)
     }
 }
 

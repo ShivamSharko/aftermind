@@ -5,6 +5,7 @@ struct MemoryListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SessionModel.createdAt, order: .reverse) private var sessions: [SessionModel]
     @State private var seedError = false
+    @State private var sessionPendingDeletion: SessionModel?
 
     private var totalItems: Int { sessions.reduce(0) { $0 + $1.items.count } }
 
@@ -39,12 +40,36 @@ struct MemoryListView: View {
                                     sessionRow(session)
                                 }
                                 .buttonStyle(PressableStyle())
+                                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        sessionPendingDeletion = session
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             }
                         }
                     }
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 110)
+            }
+            .confirmationDialog(
+                "Delete this session and all its memories?",
+                isPresented: Binding(
+                    get: { sessionPendingDeletion != nil },
+                    set: { if !$0 { sessionPendingDeletion = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let session = sessionPendingDeletion {
+                        modelContext.delete(session)
+                        try? modelContext.save()
+                    }
+                    sessionPendingDeletion = nil
+                }
+                Button("Cancel", role: .cancel) { sessionPendingDeletion = nil }
             }
             .toolbar(.hidden, for: .navigationBar)
             .alert("Could not load demo session", isPresented: $seedError) {
@@ -164,6 +189,7 @@ struct MemoryListView: View {
 
 struct SessionDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @State private var itemPendingDeletion: MemoryItemModel?
     let session: SessionModel
 
     var body: some View {
@@ -203,6 +229,13 @@ struct SessionDetailView: View {
                             itemCard(item)
                         }
                         .buttonStyle(PressableStyle())
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                itemPendingDeletion = item
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button {
                                 item.isCompleted.toggle()
@@ -225,6 +258,23 @@ struct SessionDetailView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
+        }
+        .confirmationDialog(
+            "Delete this memory?",
+            isPresented: Binding(
+                get: { itemPendingDeletion != nil },
+                set: { if !$0 { itemPendingDeletion = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let item = itemPendingDeletion {
+                    modelContext.delete(item)
+                    try? modelContext.save()
+                }
+                itemPendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) { itemPendingDeletion = nil }
         }
         .background(AmbientBackground())
         .navigationTitle("Session")
