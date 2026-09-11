@@ -295,7 +295,11 @@ struct CaptureView: View {
             let granted = await recording.requestMicrophonePermission()
             guard granted else { showPermissionDenied = true; return }
             resetState()
-            recording.start()
+            let started = recording.start()
+            guard started else {
+                errorMessage = recording.errorMessage ?? "Could not start the audio session."
+                return
+            }
             phase = .recording
         case .recording:
             let url = recording.stop()
@@ -318,28 +322,7 @@ struct CaptureView: View {
     private func seedDemoSession() {
         Task {
             do {
-                let extracted = try await MockContextExtractionService().extract(from: "demo")
-                let session = SessionModel(
-                    createdAt: Date(),
-                    summary: extracted.session_summary,
-                    transcript: "Demo session loaded for testing and demonstration.",
-                    topics: extracted.topics
-                )
-                modelContext.insert(session)
-                for item in extracted.items {
-                    let memoryItem = MemoryItemModel(
-                        type: item.type,
-                        title: item.title,
-                        detail: item.description,
-                        people: item.related_people,
-                        evidence: item.evidence,
-                        confidence: item.confidence,
-                        dueText: item.due_text
-                    )
-                    memoryItem.session = session
-                    modelContext.insert(memoryItem)
-                }
-                try modelContext.save()
+                _ = try await DemoSeedService.seed(into: modelContext)
             } catch {
                 seedError = true
             }
@@ -352,6 +335,20 @@ struct CaptureView: View {
         f.dateFormat = "yyyy-MM-dd"
         f.locale = Locale(identifier: "en_US_POSIX")
         return f.date(from: s)
+    }
+
+    private func retainAudio(_ url: URL) -> String? {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("AftermindRecordings", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dest = dir.appendingPathComponent(url.lastPathComponent)
+        try? FileManager.default.removeItem(at: dest)
+        do {
+            try FileManager.default.copyItem(at: url, to: dest)
+            return dest.path
+        } catch {
+            return nil
+        }
     }
 
     private func processPipeline(url: URL) async {
@@ -379,7 +376,8 @@ struct CaptureView: View {
                     createdAt: Date(),
                     summary: "Processing incomplete - raw transcript saved.",
                     transcript: result.text,
-                    topics: []
+                    topics: [],
+                    audioPath: retainAudio(url)
                 )
                 modelContext.insert(incomplete)
                 try modelContext.save()
@@ -418,7 +416,9 @@ struct CaptureView: View {
                     confidence: item.confidence,
                     dueText: item.due_text,
                     owner: item.owner,
-                    dueDate: parseISODate(item.due_date)
+                    dueDate: parseISODate(item.due_date),
+                    tags: item.tags,
+                    status: item.status
                 )
                 memoryItem.embedding = vec
                 memoryItem.session = session
@@ -431,8 +431,19 @@ struct CaptureView: View {
             phase = .saved
 
         } catch {
-            errorMessage = error.localizedDescription
-            phase = .idle
+            let path = retainAudio(url)
+            let failed = SessionModel(
+                createdAt: Date(),
+                summary: "Transcription failed - audio retained for retry.",
+                transcript: "",
+                topics: [],
+                audioPath: path
+            )
+            modelContext.insert(failed)
+            try? modelContext.save()
+            savedSession = failed
+            errorMessage = "Transcription failed: \(error.localizedDescription). Audio retained."
+            phase = .saved
         }
     }
 }

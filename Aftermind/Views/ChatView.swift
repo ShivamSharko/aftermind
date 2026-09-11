@@ -117,18 +117,8 @@ struct ChatView: View {
             let contextString = retriever.formatContext(retrieved)
             let sourceTitles = retrieved.map { $0.item.title }
 
-            let systemPrompt = """
-            You are Aftermind, a personal memory assistant.
-            Answer the user's question using ONLY the provided structured memories.
-            If the answer is not present, say you don't have that memory instead of guessing.
-            Be concise. Mention the memory title or evidence quote when it supports your answer.
-
-            CONTEXT:
-            \(contextString)
-            """
-
             do {
-                let response = try await LLMClient.shared.complete(systemPrompt: systemPrompt, userMessage: text)
+                let response = try await AppConfig.chatAnswerService.answer(question: text, context: contextString)
                 messages.append(ChatMessage(role: .assistant, content: response, sources: sourceTitles))
             } catch {
                 messages.append(ChatMessage(role: .assistant, content: "Sorry, I encountered an error: \(error.localizedDescription)"))

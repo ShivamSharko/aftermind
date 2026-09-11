@@ -16,7 +16,7 @@ The core loop, end to end: **Record → Transcribe → Clean/Structure → Store
 2. **Typed memory objects, not transcript chunks.** Commitments, tasks, decisions, facts and ideas are first-class records, because the interesting questions ("what did I promise?") are entity- and action-oriented, not semantic-similarity-oriented.
 3. **Every memory carries evidence + confidence.** Each item stores the exact transcript snippet it came from, so answers are auditable and hallucination-resistant.
 4. **Chat retrieves structured items, never a transcript dump.** Intent parsing + weighted retrieval → grounded prompt → cited answer.
-5. **Mock-first development.** Every external dependency (transcription, extraction) has a mock implementation behind a protocol, so the product is demoable with zero API keys (the assignment explicitly permits mocking).
+5. **Mock-first development.** Every external dependency (transcription, extraction, chat answering) has a mock implementation behind a protocol, so the product is demoable with zero API keys (the assignment explicitly permits mocking).
 6. **What I chose NOT to build:** ambient/background listening, accounts or a backend, speaker diarization, and a vector database. Each adds risk without strengthening the core loop in a 24-hour window.
 
 ## What is worth remembering (signal vs noise)
@@ -34,7 +34,7 @@ Audio (AVAudioRecorder) → TranscriptionService (Groq whisper-large-v3) → Con
 - SwiftUI + SwiftData (iOS 17), async/await throughout, protocol-based services with Groq + Mock implementations, typed errors surfaced as alerts and UI states, extraction retried once with an "incomplete session" fallback so no recording is ever lost.
 
 ## How chat retrieves context
-1. Intent parsing: item-type keywords (promise/commit → commitment, task, idea, decision, preference, fact), person names detected from stored memories, and date ranges ("today", "yesterday", "last week").
+1. Intent parsing: item-type keywords (promise/commit → commitment, task, idea, decision, preference, fact), person names detected from stored memories, and rolling date windows ("today", "yesterday", "last week" = past 7 days).
 2. Hybrid weighted scoring per memory: 0.30 keyword match + 0.18 person match + 0.15 type match + 0.15 on-device semantic similarity (Apple NaturalLanguage sentence embeddings, cosine distance) + 0.12 recency (exponential decay) + 0.10 confidence.
 3. Top-5 items formatted with their evidence into the system prompt.
 4. The LLM is instructed to answer **only** from that context and to admit gaps; the UI shows the source memories under each answer.
@@ -45,14 +45,18 @@ This keeps token use small, answers citable, and prevents the model from inventi
 - Retrieval blends lexical, metadata, recency and on-device sentence embeddings; a dedicated vector index (e.g. sqlite-vec) would scale it further.
 - No speaker diarization — single-speaker transcript assumed.
 - Relative due dates kept as text (`dueText`), not normalized to calendar dates.
-- API key lives in `AppConfig` for prototype speed; Keychain + on-device encryption would be the production path.
+- API keys are entered via the in-app Settings sheet and stored in the iOS Keychain; no secrets ship with the repository.
 - Simulator microphone depends on host hardware; "Load demo session" and mock mode guarantee a demoable state.
+- Chat history is in-memory per launch; persisting conversations across launches is a follow-up.
+- Microphone interruptions (phone calls, Siri) stop recording without auto-resume; the retained-audio fallback preserves the session so nothing is lost.
+- Date filters are rolling windows ("last week" = past 7 days), not calendar weeks.
 
 ## Advanced Engineering Features
 - **Semantic Deduplication & Hybrid Search:** Uses Apple's on-device `NaturalLanguage` sentence embeddings to prevent duplicate memories on save and power semantic chat retrieval (no cloud vector DB needed).
 - **Temporal Normalization:** The LLM resolves relative dates ("Friday") into absolute ISO dates, enabling native iOS local notifications for proactive reminders.
 - **Semantic Diarization (Ownership):** Instead of relying on expensive audio diarization APIs, the extraction prompt infers task ownership ("user" vs "Sarah") directly from conversational context.
 - **Security:** API keys are stored securely in the iOS Keychain, not in plain text.
+- **Unified demo seeding:** "Load demo session" runs the same pipeline as real capture (on-device embeddings, ownership, resolved dates, notifications), so demo data exercises every retrieval path equally.
 
 ## With another week
 - Dedicated vector index (sqlite-vec) + cross-encoder reranking for scale.
@@ -62,5 +66,6 @@ This keeps token use small, answers citable, and prevents the model from inventi
 - Ambient listening behind an explicit privacy budget: on-device voice-activity trigger, retention policy, user-visible capture log.
 
 ## Setup
-1. Free Groq key: https://console.groq.com/keys → paste into `Aftermind/Support/AppConfig.swift`, set `useMockTranscription = false` (leave `true` for a zero-setup demo).
-2. On macOS: `brew install xcodegen && xcodegen generate && open Aftermind.xcodeproj`, run on an iOS 17+ simulator.
+1. **Zero-key demo mode (default):** with `useMockTranscription = true`, transcription, extraction AND chat answering are all mocked behind protocols, so the entire product is explorable with no accounts or keys.
+2. **Real mode:** create a free Groq key at https://console.groq.com/keys, run the app, tap the settings (gear) icon on the Capture tab and paste the key (stored in the iOS Keychain), then set `useMockTranscription = false` in `Aftermind/Support/AppConfig.swift`.
+3. On macOS: `brew install xcodegen && xcodegen generate && open Aftermind.xcodeproj`, run on an iOS 17+ simulator.

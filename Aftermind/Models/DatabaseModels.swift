@@ -8,15 +8,17 @@ final class SessionModel {
     var summary: String = ""
     var transcript: String = ""
     var topics: [String] = []
+    var audioPath: String?
     
     @Relationship(deleteRule: .cascade, inverse: \MemoryItemModel.session)
     var items: [MemoryItemModel] = []
     
-    init(createdAt: Date, summary: String, transcript: String, topics: [String] = []) {
+    init(createdAt: Date, summary: String, transcript: String, topics: [String] = [], audioPath: String? = nil) {
         self.createdAt = createdAt
         self.summary = summary
         self.transcript = transcript
         self.topics = topics
+        self.audioPath = audioPath
     }
 }
 
@@ -33,12 +35,27 @@ final class MemoryItemModel {
     var owner: String?
     var dueDate: Date?
     var embedding: [Double]?
+    var tags: [String] = []
+    var status: String?
     var isCompleted: Bool = false
     var createdAt: Date = Date()
     
     var session: SessionModel?
     
-    init(type: String, title: String, detail: String, people: [String], evidence: String, confidence: Double, dueText: String? = nil, isCompleted: Bool = false, owner: String? = nil, dueDate: Date? = nil) {
+    init(
+        type: String,
+        title: String,
+        detail: String,
+        people: [String],
+        evidence: String,
+        confidence: Double,
+        dueText: String? = nil,
+        owner: String? = nil,
+        dueDate: Date? = nil,
+        embedding: [Double]? = nil,
+        tags: [String] = [],
+        status: String? = nil
+    ) {
         self.type = type
         self.title = title
         self.detail = detail
@@ -46,9 +63,12 @@ final class MemoryItemModel {
         self.evidence = evidence
         self.confidence = confidence
         self.dueText = dueText
-        self.isCompleted = isCompleted
         self.owner = owner
         self.dueDate = dueDate
+        self.embedding = embedding
+        self.tags = tags
+        self.status = status
+        self.isCompleted = (status == "done" || status == "completed")
     }
 }
 

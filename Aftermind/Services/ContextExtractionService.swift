@@ -20,6 +20,7 @@ final class GroqContextExtractionService: ContextExtractionServiceProtocol {
         3. "owner": Who is responsible? Use "user" for the recorder, otherwise the person's name, or null.
         4. "due_date": Resolve relative time ("Friday", "tomorrow") into an absolute ISO date (yyyy-MM-dd). Keep original words in "due_text".
         5. Output ONLY valid JSON matching this schema:
+        6. confidence is your certainty between 0.0 and 1.0; reason about it per item, never output a fixed default.
         {
           "session_summary": "string",
           "participants": [{ "name": "string", "role": "string" }],
@@ -33,7 +34,7 @@ final class GroqContextExtractionService: ContextExtractionServiceProtocol {
               "related_people": ["string"],
               "due_text": "string or null",
               "due_date": "yyyy-MM-dd or null",
-              "confidence": 0.9,
+              "confidence": 0.85,
               "evidence": "string",
               "status": "string or null",
               "tags": ["string"]
@@ -59,6 +60,14 @@ final class MockContextExtractionService: ContextExtractionServiceProtocol {
     func extract(from transcript: String) async throws -> ExtractedSession {
         try await Task.sleep(nanoseconds: 800_000_000)
         
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        let todayISO = fmt.string(from: Date())
+        let tomorrowISO = fmt.string(from: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date())
+        var fridayComps = DateComponents(); fridayComps.weekday = 6
+        let fridayISO = fmt.string(from: Calendar.current.nextDate(after: Date(), matching: fridayComps, matchingPolicy: .nextTime) ?? Date())
+        
         let jsonString = """
         {
           "session_summary": "User discussed startup hiring with Rahul and promised to send the pitch deck. Sarah will send the contract.",
@@ -76,7 +85,7 @@ final class MockContextExtractionService: ContextExtractionServiceProtocol {
               "owner": "user",
               "related_people": ["Rahul"],
               "due_text": "tonight",
-              "due_date": "2026-09-12",
+              "due_date": "\(todayISO)",
               "confidence": 0.95,
               "evidence": "I'll send you the pitch deck tonight.",
               "status": "open",
@@ -89,7 +98,7 @@ final class MockContextExtractionService: ContextExtractionServiceProtocol {
               "owner": "Sarah",
               "related_people": ["Sarah"],
               "due_text": "tomorrow",
-              "due_date": null,
+              "due_date": "\(tomorrowISO)",
               "confidence": 0.90,
               "evidence": "Sarah said she would send the contract tomorrow.",
               "status": "pending",
@@ -115,7 +124,7 @@ final class MockContextExtractionService: ContextExtractionServiceProtocol {
               "owner": "user",
               "related_people": ["Rahul"],
               "due_text": "Friday",
-              "due_date": null,
+              "due_date": "\(fridayISO)",
               "confidence": 0.88,
               "evidence": "Let's decide by Friday whether we move forward.",
               "status": "pending",

@@ -22,4 +22,8 @@ enum AppConfig {
     static var transcriptionService: TranscriptionServiceProtocol {
         useMockTranscription ? MockTranscriptionService() : GroqTranscriptionService()
     }
+    
+    static var chatAnswerService: ChatAnswerServiceProtocol {
+        useMockTranscription ? MockChatAnswerService() : GroqChatAnswerService()
+    }
 }

@@ -154,28 +154,7 @@ struct MemoryListView: View {
     private func seedDemoSession() {
         Task {
             do {
-                let extracted = try await MockContextExtractionService().extract(from: "demo")
-                let session = SessionModel(
-                    createdAt: Date(),
-                    summary: extracted.session_summary,
-                    transcript: "Demo session loaded for testing and demonstration.",
-                    topics: extracted.topics
-                )
-                modelContext.insert(session)
-                for item in extracted.items {
-                    let memoryItem = MemoryItemModel(
-                        type: item.type,
-                        title: item.title,
-                        detail: item.description,
-                        people: item.related_people,
-                        evidence: item.evidence,
-                        confidence: item.confidence,
-                        dueText: item.due_text
-                    )
-                    memoryItem.session = session
-                    modelContext.insert(memoryItem)
-                }
-                try modelContext.save()
+                _ = try await DemoSeedService.seed(into: modelContext)
             } catch {
                 seedError = true
             }

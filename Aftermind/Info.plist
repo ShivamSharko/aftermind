@@ -24,8 +24,6 @@
     <dict/>
     <key>NSMicrophoneUsageDescription</key>
     <string>Aftermind records audio so it can extract useful context from your conversations.</string>
-    <key>NSSpeechRecognitionUsageDescription</key>
-    <string>Aftermind transcribes recorded audio into text.</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
