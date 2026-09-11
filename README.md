@@ -76,6 +76,18 @@ This keeps token use small, answers citable, and prevents the model from inventi
 4. Multimodal context (vision + audio).
 5. Ambient capture behind an explicit privacy budget.
 
+## What Aftermind ships that no competitor does (verified September 2026)
+1. **Auditable memory:** every memory carries its transcript evidence and a confidence score, and chat answers cite SOURCES. Competitors (Omi, Plaud, Limitless) show summaries only; none let you inspect why the AI remembers something - directly addressing 2026's top complaint class: trust in AI transcription accuracy.
+2. **Human-in-the-loop correction:** one tap on "Mark as inaccurate" flags the memory disputed and decays its confidence, so retrieval demotes it. Memory you can correct, not just consume.
+3. **Agentic memory on day one:** commitments and tasks become native Apple Reminders (with the resolved due-date as alarm) or drafted follow-up messages in one tap - the 2026 bar for personal AI, which note apps only promise inside their own walled gardens.
+4. **Semantic ownership without hardware:** "You" vs "Sarah" responsibility badges inferred from conversational context, with no paid diarization and no pendant.
+5. **Data-sovereignty trio:** local-first storage, full deletion with confirmation, and one-tap JSON export - portability became a consumer requirement after Limitless sunset stranded user data and Bee was acquired by Amazon.
+
+### Still missing industry-wide (our next bets)
+- Bystander consent mode for any future ambient capture (visible recording notice, consent capture, retention window).
+- Automatic conflict resolution: superseding stale memories when facts change ("deadline moved from Friday to Tuesday").
+- Multimodal context (vision + audio) as wearables converge toward smart glasses.
+
 ## Setup
 1. **Zero-key demo mode (default):** with `useMockTranscription = true`, transcription, extraction AND chat answering are all mocked behind protocols, so the entire product is explorable with no accounts or keys.
 2. **Real mode:** create a free Groq key at https://console.groq.com/keys, run the app, tap the settings (gear) icon on the Capture tab and paste the key (stored in the iOS Keychain), then set `useMockTranscription = false` in `Aftermind/Support/AppConfig.swift`.

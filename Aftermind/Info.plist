@@ -24,6 +24,8 @@
     <dict/>
     <key>NSMicrophoneUsageDescription</key>
     <string>Aftermind records audio so it can extract useful context from your conversations.</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>Aftermind creates Apple Reminders from commitments and tasks it extracted from your conversations.</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
