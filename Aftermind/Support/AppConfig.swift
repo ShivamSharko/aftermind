@@ -13,7 +13,8 @@ enum AppConfig {
 
     /// Models hosted for free on Groq
     static let transcriptionModel = "whisper-large-v3"
-    static let llmModel = "openai/gpt-oss-120b"
+    static let llmModel = "groq/compound-mini" // Compound system with integrated reasoning for structured extraction
+    static let chatModel = "groq/compound" // Compound system with integrated reasoning and web search for enriched answers
 
     /// true  = demo mode, no API key needed (returns a sample conversation)
     /// false = real mode, calls Groq Whisper with the recorded audio

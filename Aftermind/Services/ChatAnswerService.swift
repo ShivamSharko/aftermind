@@ -15,7 +15,7 @@ final class GroqChatAnswerService: ChatAnswerServiceProtocol {
         CONTEXT:
         \(context)
         """
-        return try await LLMClient.shared.complete(systemPrompt: systemPrompt, userMessage: question)
+        return try await LLMClient.shared.complete(systemPrompt: systemPrompt, userMessage: question, enableWebSearch: true)
     }
 }
 

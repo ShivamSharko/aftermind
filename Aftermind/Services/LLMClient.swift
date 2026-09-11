@@ -21,7 +21,7 @@ final class LLMClient {
     
     private init() {}
     
-    func complete(systemPrompt: String, userMessage: String) async throws -> String {
+    func complete(systemPrompt: String, userMessage: String, enableWebSearch: Bool = false) async throws -> String {
         let apiKey = AppConfig.groqAPIKey
         guard !apiKey.isEmpty, !apiKey.contains("PASTE") else { throw LLMError.missingKey }
         
@@ -35,15 +35,19 @@ final class LLMClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         // Force JSON output from Groq
-        let requestBody: [String: Any] = [
-            "model": AppConfig.llmModel,
+        var requestBody: [String: Any] = [
+            "model": enableWebSearch ? AppConfig.chatModel : AppConfig.llmModel,
             "messages": [
-                ["role": "system", "content": systemPrompt],
+                ["role": "system", "content": systemPrompt + "\n\nThink step-by-step about what constitutes durable, actionable memory."],
                 ["role": "user", "content": userMessage]
             ],
             "response_format": ["type": "json_object"],
             "temperature": 0.2
         ]
+        
+        if enableWebSearch {
+            requestBody["tools"] = [["type": "web_search"]]
+        }
         
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         
