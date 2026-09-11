@@ -6,7 +6,7 @@ enum ReminderBridge {
 
     static func requestAccess() async -> Bool {
         do {
-            return try await store.requestAccess(to: .reminder)
+            return try await store.requestFullAccessToReminders()
         } catch {
             return false
         }
@@ -15,7 +15,7 @@ enum ReminderBridge {
     static func add(title: String, due: Date?) -> Bool {
         let reminder = EKReminder(eventStore: store)
         reminder.title = title
-        reminder.calendar = store.defaultCalendarForNewReminders
+        reminder.calendar = store.defaultCalendarForNewReminders()
         if let due {
             reminder.addAlarm(EKAlarm(absoluteDate: due))
         }
@@ -27,4 +27,3 @@ enum ReminderBridge {
         }
     }
 }
-

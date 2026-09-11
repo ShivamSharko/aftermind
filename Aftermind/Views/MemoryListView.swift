@@ -88,26 +88,47 @@ struct MemoryListView: View {
                 Button("OK", role: .cancel) { }
             }
             .sheet(isPresented: $showExportSheet) {
-                if let exportURL {
-                    VStack(spacing: 16) {
-                        Text("Memory export ready")
-                            .font(.headline)
-                        ShareLink(item: exportURL) {
-                            Text("Share aftermind-export.json")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.black)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Theme.accent)
-                                .clipShape(Capsule())
+                NavigationStack {
+                    VStack(spacing: 20) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 64))
+                            .foregroundColor(Theme.accent)
+                        Text("Export Ready")
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.white)
+                        Text("Your memories have been exported to JSON.")
+                            .foregroundColor(Theme.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+
+                        if let url = exportURL {
+                            ShareLink(item: url) {
+                                Text("Share JSON file")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(Theme.accent)
+                                    .clipShape(Capsule())
+                            }
+                            .padding(.horizontal, 32)
+                            .padding(.top, 10)
                         }
-                        Button("Done") {
+
+                        Button {
                             showExportSheet = false
                             exportURL = nil
+                        } label: {
+                            Text("Done")
+                                .font(.headline)
+                                .foregroundColor(.white)
                         }
+                        .padding(.top, 10)
                     }
-                    .padding(24)
-                    .presentationDetents([.height(240)])
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AmbientBackground())
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
                 }
             }
         }

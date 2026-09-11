@@ -4,11 +4,15 @@ import SwiftData
 struct CaptureView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var sessions: [SessionModel]
-    @Query(filter: #Predicate<MemoryItemModel> { item in
-        (item.type == "commitment" || item.type == "task") && 
-        item.status != "done" && 
-        item.status != "completed"
-    }, sort: \MemoryItemModel.createdAt, order: .reverse) private var openItems: [MemoryItemModel]
+    @Query(sort: \MemoryItemModel.createdAt, order: .reverse) private var allItems: [MemoryItemModel]
+
+    private var openItems: [MemoryItemModel] {
+        allItems.filter { item in
+            (item.type == "commitment" || item.type == "task") &&
+            item.status != "done" &&
+            item.status != "completed"
+        }
+    }
 
     @StateObject private var recording = RecordingService()
     private let transcriptionService = AppConfig.transcriptionService
@@ -21,8 +25,6 @@ struct CaptureView: View {
     @State private var savedSession: SessionModel?
     @State private var seedError = false
     @State private var duplicateCount = 0
-    @State private var showSettings = false
-    @State private var tempAPIKey = ""
 
     enum ProcessingPhase {
         case idle, recording, transcribing, extracting, saved
@@ -32,156 +34,15 @@ struct CaptureView: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 22) {
-                    HStack {
-                        ZStack {
-                            Circle()
-                                .fill(LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(width: 44, height: 44)
-                            Text("A")
-                                .font(.headline.weight(.bold))
-                                .foregroundColor(.white)
-                        }
-                        Spacer()
-                        CircleIconButton(systemName: "gearshape.fill") {
-                            tempAPIKey = AppConfig.groqAPIKey
-                            showSettings = true
-                        }
-                        CircleIconButton(systemName: "sparkles", action: seedDemoSession)
-                    }
-                    .padding(.top, 12)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(greeting)
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(.white)
-                        Text("Aftermind remembers so you don't have to.")
-                            .font(.subheadline)
-                            .foregroundColor(Theme.textSecondary)
-                    }
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            PillChip(title: phaseChip, isSelected: true)
-                            PillChip(title: "\(sessions.count) sessions", isSelected: false)
-                            if AppConfig.useMockTranscription {
-                                PillChip(title: "demo mode", isSelected: false)
-                            }
-                        }
-                    }
-
+                    headerSection
+                    greetingSection
+                    chipsSection
                     micCard
-
-                    if !openItems.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "bolt.fill").foregroundColor(Theme.accent)
-                                Text("Open Focus").font(.headline).foregroundColor(.white)
-                                Spacer()
-                                Text("\(openItems.count)").font(.caption.bold()).foregroundColor(Theme.accent)
-                            }
-                            ForEach(openItems.prefix(2)) { item in
-                                HStack(spacing: 10) {
-                                    Circle().fill(Theme.accent).frame(width: 6, height: 6)
-                                    Text(item.title).font(.subheadline).foregroundColor(.white.opacity(0.85)).lineLimit(1)
-                                    Spacer()
-                                    if let due = item.dueDate {
-                                        Text(due.formatted(date: .abbreviated, time: .omitted))
-                                            .font(.caption2)
-                                            .foregroundColor(Theme.accent)
-                                    } else if let due = item.dueText {
-                                        Text(due).font(.caption2).foregroundColor(Theme.textSecondary)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(16)
-                        .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.2), lineWidth: 1))
-                    }
-
-                    Button {
-                        Task { await toggle() }
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: buttonIcon)
-                            Text(buttonTitle)
-                                .fontWeight(.bold)
-                        }
-                        .foregroundColor(phase == .recording ? .white : (phase == .transcribing || phase == .extracting ? .white : .black))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(buttonColor)
-                        .clipShape(Capsule())
-                        .shadow(color: buttonColor.opacity(0.35), radius: 16, y: 6)
-                    }
-                    .buttonStyle(PressableStyle())
-                    .disabled(phase == .transcribing || phase == .extracting)
-
-                    if let transcript, phase != .idle {
-                        VStack(alignment: .leading, spacing: 10) {
-                            SectionHeader(title: "Transcript")
-                            Text(transcript)
-                                .font(.callout)
-                                .foregroundColor(Theme.textSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(16)
-                                .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
-                        }
-                    }
-
-                    if let savedSession {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    Circle().fill(Theme.accent).frame(width: 40, height: 40)
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.black)
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Saved to memory")
-                                        .font(.subheadline.weight(.bold))
-                                        .foregroundColor(.white)
-                                    Text("\(savedSession.items.count) memories extracted")
-                                        .font(.caption)
-                                        .foregroundColor(Theme.textSecondary)
-                                    if duplicateCount > 0 {
-                                        Text("Skipped \(duplicateCount) duplicate memories (semantic dedup).")
-                                            .font(.caption)
-                                            .foregroundColor(Theme.textSecondary)
-                                    }
-                                    if let path = savedSession.audioPath, savedSession.transcript.isEmpty {
-                                        Button {
-                                            Task { await retryTranscription(session: savedSession, path: path) }
-                                        } label: {
-                                            Label("Retry transcription", systemImage: "arrow.clockwise")
-                                                .font(.subheadline.weight(.bold))
-                                                .foregroundColor(.black)
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 10)
-                                                .background(Theme.accent)
-                                                .clipShape(Capsule())
-                                        }
-                                        .buttonStyle(PressableStyle())
-                                    }
-                                }
-                                Spacer()
-                            }
-                            Text(savedSession.summary)
-                                .font(.callout)
-                                .foregroundColor(.white.opacity(0.85))
-                        }
-                        .padding(16)
-                        .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.35), lineWidth: 1))
-                    }
-
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundColor(Color(red: 1.0, green: 0.45, blue: 0.50))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                    mainButton
+                    focusSection
+                    transcriptSection
+                    savedSection
+                    errorSection
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 110)
@@ -195,14 +56,46 @@ struct CaptureView: View {
             .alert("Could not load demo session", isPresented: $seedError) {
                 Button("OK", role: .cancel) { }
             }
-            .alert("Settings", isPresented: $showSettings) {
-                TextField("Groq API Key", text: $tempAPIKey)
-                Button("Cancel", role: .cancel) { }
-                Button("Save") {
-                    AppConfig.groqAPIKey = tempAPIKey
+        }
+    }
+
+    // MARK: - Sections
+
+    private var headerSection: some View {
+        HStack {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 44, height: 44)
+                Text("A")
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(.white)
+            }
+            Spacer()
+            CircleIconButton(systemName: "sparkles", action: seedDemoSession)
+        }
+        .padding(.top, 12)
+    }
+
+    private var greetingSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(greeting)
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.white)
+            Text("Aftermind remembers so you don't have to.")
+                .font(.subheadline)
+                .foregroundColor(Theme.textSecondary)
+        }
+    }
+
+    private var chipsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                PillChip(title: phaseChip, isSelected: true)
+                PillChip(title: "\(sessions.count) sessions", isSelected: false)
+                if AppConfig.useMockTranscription {
+                    PillChip(title: "demo mode", isSelected: false)
                 }
-            } message: {
-                Text("Enter your Groq API key. It will be stored securely in the iOS Keychain.")
             }
         }
     }
@@ -235,6 +128,134 @@ struct CaptureView: View {
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 28))
         .overlay(RoundedRectangle(cornerRadius: 28).stroke(Color.white.opacity(0.06), lineWidth: 1))
     }
+
+    private var mainButton: some View {
+        Button {
+            Task { await toggle() }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: buttonIcon)
+                Text(buttonTitle)
+                    .fontWeight(.bold)
+            }
+            .foregroundColor(buttonForegroundColor)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(buttonColor)
+            .clipShape(Capsule())
+            .shadow(color: buttonColor.opacity(0.35), radius: 16, y: 6)
+        }
+        .buttonStyle(PressableStyle())
+        .disabled(phase == .transcribing || phase == .extracting)
+    }
+
+    @ViewBuilder
+    private var focusSection: some View {
+        if !openItems.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "bolt.fill").foregroundColor(Theme.accent)
+                    Text("Open Focus").font(.headline).foregroundColor(.white)
+                    Spacer()
+                    Text("\(openItems.count)").font(.caption.bold()).foregroundColor(Theme.accent)
+                }
+                ForEach(openItems.prefix(2)) { item in
+                    HStack(spacing: 10) {
+                        Circle().fill(Theme.accent).frame(width: 6, height: 6)
+                        Text(item.title).font(.subheadline).foregroundColor(.white.opacity(0.85)).lineLimit(1)
+                        Spacer()
+                        if let due = item.dueDate {
+                            Text(due.formatted(date: .abbreviated, time: .omitted))
+                                .font(.caption2)
+                                .foregroundColor(Theme.accent)
+                        } else if let due = item.dueText {
+                            Text(due).font(.caption2).foregroundColor(Theme.textSecondary)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.2), lineWidth: 1))
+        }
+    }
+
+    @ViewBuilder
+    private var transcriptSection: some View {
+        if let transcript, phase != .idle {
+            VStack(alignment: .leading, spacing: 10) {
+                SectionHeader(title: "Transcript")
+                Text(transcript)
+                    .font(.callout)
+                    .foregroundColor(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var savedSection: some View {
+        if let savedSession {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle().fill(Theme.accent).frame(width: 40, height: 40)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.black)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Saved to memory")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(.white)
+                        Text("\(savedSession.items.count) memories extracted")
+                            .font(.caption)
+                            .foregroundColor(Theme.textSecondary)
+                    }
+                    Spacer()
+                }
+                Text(savedSession.summary)
+                    .font(.callout)
+                    .foregroundColor(.white.opacity(0.85))
+                if duplicateCount > 0 {
+                    Text("Skipped \(duplicateCount) duplicate memories already stored.")
+                        .font(.caption)
+                        .foregroundColor(Theme.textSecondary)
+                }
+                if let path = savedSession.audioPath, savedSession.transcript.isEmpty {
+                    Button {
+                        Task { await retryTranscription(session: savedSession, path: path) }
+                    } label: {
+                        Label("Retry transcription", systemImage: "arrow.clockwise")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Theme.accent)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+            }
+            .padding(16)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.35), lineWidth: 1))
+        }
+    }
+
+    @ViewBuilder
+    private var errorSection: some View {
+        if let errorMessage {
+            Text(errorMessage)
+                .font(.footnote)
+                .foregroundColor(Color(red: 1.0, green: 0.45, blue: 0.50))
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: - UI helpers
 
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -301,9 +322,18 @@ struct CaptureView: View {
         }
     }
 
+    private var buttonForegroundColor: Color {
+        switch phase {
+        case .recording, .transcribing, .extracting: return .white
+        case .idle, .saved: return .black
+        }
+    }
+
     private func formatted(_ seconds: Int) -> String {
         String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
+
+    // MARK: - Actions
 
     private func toggle() async {
         switch phase {
@@ -345,14 +375,6 @@ struct CaptureView: View {
         }
     }
 
-    private func retryTranscription(session: SessionModel, path: String) async {
-        let url = URL(fileURLWithPath: path)
-        modelContext.delete(session)
-        try? modelContext.save()
-        savedSession = nil
-        await processPipeline(url: url)
-    }
-
     private func retainAudio(_ url: URL) -> String? {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("AftermindRecordings", isDirectory: true)
@@ -365,6 +387,14 @@ struct CaptureView: View {
         } catch {
             return nil
         }
+    }
+
+    private func retryTranscription(session: SessionModel, path: String) async {
+        let url = URL(fileURLWithPath: path)
+        modelContext.delete(session)
+        try? modelContext.save()
+        savedSession = nil
+        await processPipeline(url: url)
     }
 
     private func processPipeline(url: URL) async {
@@ -403,6 +433,8 @@ struct CaptureView: View {
                 return
             }
 
+            let existingItems = (try? modelContext.fetch(FetchDescriptor<MemoryItemModel>())) ?? []
+
             let session = SessionModel(
                 createdAt: Date(),
                 summary: extracted.session_summary,
@@ -411,7 +443,6 @@ struct CaptureView: View {
             )
             modelContext.insert(session)
 
-            let existingItems = (try? modelContext.fetch(FetchDescriptor<MemoryItemModel>())) ?? []
             for item in extracted.items {
                 let text = "\(item.title) \(item.description) \(item.evidence)"
                 let vec = EmbeddingService.shared.vector(for: text)
@@ -422,7 +453,6 @@ struct CaptureView: View {
                     duplicateCount += 1
                     continue
                 }
-
                 let memoryItem = MemoryItemModel(
                     type: item.type,
                     title: item.title,
@@ -433,10 +463,10 @@ struct CaptureView: View {
                     dueText: item.due_text,
                     owner: item.owner,
                     dueDate: DateParsing.isoDate(item.due_date),
+                    embedding: vec,
                     tags: item.tags,
                     status: item.status
                 )
-                memoryItem.embedding = vec
                 memoryItem.session = session
                 modelContext.insert(memoryItem)
                 NotificationService.schedule(for: memoryItem)
