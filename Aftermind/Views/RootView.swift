@@ -51,13 +51,13 @@ struct FloatingTabBar: View {
                     ZStack {
                         if selected == tab {
                             Circle()
-                                .fill(Theme.accent)
+                                .fill(LinearGradient(colors: Palette.rose, startPoint: .topLeading, endPoint: .bottomTrailing))
                                 .frame(width: 46, height: 46)
                                 .shadow(color: Theme.accent.opacity(0.45), radius: 14, y: 4)
                         }
                         Image(systemName: tab.icon)
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(selected == tab ? .black : .white.opacity(0.65))
+                            .foregroundColor(selected == tab ? .white : .white.opacity(0.65))
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 58)

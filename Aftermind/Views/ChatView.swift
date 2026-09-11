@@ -127,11 +127,15 @@ struct MessageBubble: View {
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
                 Text(message.content)
                     .font(.callout)
-                    .foregroundColor(message.role == .user ? .black : .white)
+                    .foregroundColor(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(message.role == .user ? Theme.accent : Theme.card, in: RoundedRectangle(cornerRadius: 20))
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(message.role == .user ? Color.clear : Color.white.opacity(0.06), lineWidth: 1))
+                    .background(
+                        message.role == .user
+                            ? LinearGradient(colors: Palette.rose, startPoint: .topLeading, endPoint: .bottomTrailing)
+                            : LinearGradient(colors: Palette.slate, startPoint: .topLeading, endPoint: .bottomTrailing),
+                        in: RoundedRectangle(cornerRadius: 22)
+                    )
 
                 if !message.sources.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {

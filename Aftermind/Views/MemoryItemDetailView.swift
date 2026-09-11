@@ -45,7 +45,7 @@ struct MemoryItemDetailView: View {
                     .foregroundColor(.white.opacity(0.85))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
-                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+                    .background(LinearGradient(colors: Palette.slate, startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 24))
 
                 if !item.people.isEmpty {
                     SectionHeader(title: "People")
@@ -74,7 +74,7 @@ struct MemoryItemDetailView: View {
                     .foregroundColor(Theme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
-                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+                    .background(LinearGradient(colors: Palette.slate, startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 24))
 
                 SectionHeader(title: "Confidence")
                 VStack(alignment: .leading, spacing: 8) {
@@ -106,7 +106,7 @@ struct MemoryItemDetailView: View {
                         .foregroundColor(item.status == "disputed" ? Color(red: 1.0, green: 0.45, blue: 0.50) : (item.isCompleted ? Theme.accent : Theme.textSecondary))
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+                        .background(LinearGradient(colors: Palette.slate, startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 24))
                 }
 
                 if isActionable {

@@ -195,7 +195,7 @@ struct MemoryListView: View {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing),
+                LinearGradient(colors: Palette.rose, startPoint: .topLeading, endPoint: .bottomTrailing),
                 in: RoundedRectangle(cornerRadius: 26)
             )
             .shadow(color: Theme.purpleDeep.opacity(0.5), radius: 20, y: 10)
@@ -226,7 +226,7 @@ struct MemoryListView: View {
             Spacer(minLength: 8)
         }
         .padding(14)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+        .background(LinearGradient(colors: Palette.forType(session.items.first?.type ?? "fact"), startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 24))
     }
 
     private func seedDemoSession() {
@@ -408,6 +408,6 @@ struct SessionDetailView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+        .background(LinearGradient(colors: Palette.forType(item.type), startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 24))
     }
 }

@@ -27,17 +27,17 @@ struct AmbientBackground: View {
         ZStack {
             Theme.background.ignoresSafeArea()
             Circle()
-                .fill(Color(red: 0.85, green: 0.25, blue: 0.55).opacity(0.32))
+                .fill(Color(red: 0.85, green: 0.25, blue: 0.55).opacity(0.12))
                 .frame(width: 340, height: 340)
                 .blur(radius: 110)
                 .offset(x: 70, y: -300)
             Circle()
-                .fill(Color(red: 0.45, green: 0.25, blue: 0.75).opacity(0.28))
+                .fill(Color(red: 0.45, green: 0.25, blue: 0.75).opacity(0.10))
                 .frame(width: 320, height: 320)
                 .blur(radius: 100)
                 .offset(x: -110, y: 60)
             Circle()
-                .fill(Color(red: 0.95, green: 0.55, blue: 0.25).opacity(0.18))
+                .fill(Color(red: 0.95, green: 0.55, blue: 0.25).opacity(0.08))
                 .frame(width: 280, height: 280)
                 .blur(radius: 90)
                 .offset(x: 120, y: 380)
@@ -124,6 +124,82 @@ struct TypeBadge: View {
             .padding(.vertical, 4)
             .background(Theme.color(for: type).opacity(0.18))
             .clipShape(Capsule())
+    }
+}
+
+enum Palette {
+    static let rose: [Color] = [Color(red: 0.87, green: 0.56, blue: 0.56), Color(red: 0.59, green: 0.40, blue: 0.50)]
+    static let sage: [Color] = [Color(red: 0.56, green: 0.66, blue: 0.58), Color(red: 0.32, green: 0.42, blue: 0.38)]
+    static let peri: [Color] = [Color(red: 0.56, green: 0.61, blue: 0.90), Color(red: 0.38, green: 0.43, blue: 0.72)]
+    static let terra: [Color] = [Color(red: 0.86, green: 0.46, blue: 0.30), Color(red: 0.66, green: 0.33, blue: 0.24)]
+    static let cream: [Color] = [Color(red: 0.93, green: 0.87, blue: 0.75), Color(red: 0.78, green: 0.70, blue: 0.58)]
+    static let magenta: [Color] = [Color(red: 0.91, green: 0.47, blue: 0.71), Color(red: 0.72, green: 0.29, blue: 0.53)]
+    static let slate: [Color] = [Color(red: 0.42, green: 0.43, blue: 0.46), Color(red: 0.22, green: 0.23, blue: 0.26)]
+
+    static func forType(_ type: String) -> [Color] {
+        switch type {
+        case "commitment": return rose
+        case "task": return terra
+        case "decision": return peri
+        case "fact": return sage
+        case "idea": return magenta
+        case "preference": return cream
+        default: return slate
+        }
+    }
+}
+
+struct GradientTile<Content: View>: View {
+    let palette: [Color]
+    var blobColor: Color = Color.black.opacity(0.50)
+    var blobOffset: CGSize = CGSize(width: 26, height: 34)
+    var cornerRadius: CGFloat = 26
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                ZStack {
+                    LinearGradient(colors: palette, startPoint: .topLeading, endPoint: .bottomTrailing)
+                    Circle()
+                        .fill(blobColor)
+                        .frame(width: 150, height: 150)
+                        .blur(radius: 45)
+                        .offset(blobOffset)
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+    }
+}
+
+struct TileCaption: View {
+    let text: String
+    var color: Color = .white.opacity(0.85)
+    var body: some View {
+        Text(text.uppercased())
+            .font(.caption2.weight(.semibold))
+            .tracking(1.2)
+            .foregroundColor(color)
+    }
+}
+
+struct TileValue: View {
+    let text: String
+    var suffix: String? = nil
+    var color: Color = .white
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(text)
+                .font(.system(size: 32, weight: .semibold, design: .rounded))
+                .foregroundColor(color)
+            if let suffix {
+                Text(suffix)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(color.opacity(0.8))
+            }
+        }
     }
 }
 

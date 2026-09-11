@@ -38,9 +38,8 @@ struct CaptureView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 22) {
                     headerSection
-                    greetingSection
-                    chipsSection
                     micCard
+                    statsGrid
                     focusSection
                     transcriptSection
                     savedSection
@@ -71,14 +70,14 @@ struct CaptureView: View {
     // MARK: - Sections
 
     private var headerSection: some View {
-        HStack {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 44, height: 44)
-                Text("A")
-                    .font(.headline.weight(.bold))
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Overview")
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.white)
+                Text(greeting + " - Aftermind remembers for you")
+                    .font(.caption)
+                    .foregroundColor(Theme.textSecondary)
             }
             Spacer()
             CircleIconButton(systemName: "sparkles", action: seedDemoSession)
@@ -86,60 +85,84 @@ struct CaptureView: View {
         .padding(.top, 12)
     }
 
-    private var greetingSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(greeting)
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.white)
-            Text("Aftermind remembers so you don't have to.")
-                .font(.subheadline)
-                .foregroundColor(Theme.textSecondary)
+    private var statsGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
+            GradientTile(palette: Palette.sage) {
+                VStack(alignment: .leading, spacing: 10) {
+                    TileCaption(text: "Sessions")
+                    TileValue(text: "\(sessions.count)")
+                }
+            }
+            .onTapGesture { onOpenMemory() }
+            GradientTile(palette: Palette.peri) {
+                VStack(alignment: .leading, spacing: 10) {
+                    TileCaption(text: "Memories")
+                    TileValue(text: "\(totalMemories)")
+                }
+            }
+            .onTapGesture { onOpenMemory() }
+            GradientTile(palette: Palette.terra) {
+                VStack(alignment: .leading, spacing: 10) {
+                    TileCaption(text: "Open focus")
+                    TileValue(text: "\(openItems.count)")
+                }
+            }
+            GradientTile(palette: Palette.magenta) {
+                VStack(alignment: .leading, spacing: 10) {
+                    TileCaption(text: "Mode")
+                    TileValue(text: AppConfig.useMockTranscription ? "Demo" : "Live")
+                }
+            }
+            .onTapGesture { showDemoInfo = true }
         }
     }
 
-    private var chipsSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                PillChip(title: phaseChip, isSelected: true)
-                PillChip(title: "\(sessions.count) sessions", isSelected: false, action: onOpenMemory)
-                PillChip(title: AppConfig.useMockTranscription ? "demo mode" : "live mode", isSelected: false) { showDemoInfo = true }
-            }
-        }
-    }
+    private var totalMemories: Int { sessions.reduce(0) { $0 + $1.items.count } }
 
     private var micCard: some View {
         Button {
             Task { await toggle() }
         } label: {
             ZStack {
-                gradientField
-                VStack(spacing: 16) {
+                reactiveField
+                VStack(spacing: 14) {
+                    HStack {
+                        TileCaption(text: phase == .recording ? "Recording" : "Record")
+                        Spacer()
+                        Circle()
+                            .fill(phase == .recording ? Color.white : Color.white.opacity(0.35))
+                            .frame(width: 8, height: 8)
+                    }
                     ZStack {
                         Circle()
-                            .fill(LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(width: 112, height: 112)
-                            .shadow(color: Theme.purpleDeep.opacity(0.6), radius: 24, y: 10)
-                            .scaleEffect(1.0 + 0.08 * glow)
+                            .stroke(Color.white.opacity(0.55), lineWidth: 1.5)
+                            .frame(width: 128, height: 128)
+                        Circle()
+                            .fill(Color.white.opacity(0.10 + 0.10 * glow))
+                            .frame(width: 128, height: 128)
                         Image(systemName: phase == .recording ? "waveform" : "mic.fill")
-                            .font(.system(size: 38, weight: .semibold))
+                            .font(.system(size: 34, weight: .semibold))
                             .foregroundColor(.white)
                     }
-                    Text(statusTitle)
-                        .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundColor(.white)
+                    .scaleEffect(1.0 + 0.06 * glow)
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(statusTitle)
+                            .font(.system(size: 30, weight: .semibold, design: .rounded).monospacedDigit())
+                            .foregroundColor(.white)
+                        Spacer()
+                    }
                     Text(statusSubtitle)
                         .font(.caption)
-                        .foregroundColor(Theme.textSecondary)
+                        .foregroundColor(.white.opacity(0.75))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.vertical, 28)
+                .padding(20)
             }
             .frame(maxWidth: .infinity)
-            .background(Theme.card, in: RoundedRectangle(cornerRadius: 28))
-            .clipShape(RoundedRectangle(cornerRadius: 28))
-            .overlay(
-                RoundedRectangle(cornerRadius: 28)
-                    .stroke(phase == .recording ? Theme.accent.opacity(0.4) : Color.white.opacity(0.06), lineWidth: 1)
+            .background(
+                LinearGradient(colors: Palette.rose, startPoint: .topLeading, endPoint: .bottomTrailing)
             )
+            .clipShape(RoundedRectangle(cornerRadius: 30))
         }
         .buttonStyle(PressableStyle())
         .disabled(phase == .transcribing || phase == .extracting)
@@ -149,23 +172,23 @@ struct CaptureView: View {
         phase == .recording ? max(0.18, recording.soundLevel) : 0.18
     }
 
-    private var gradientField: some View {
+    private var reactiveField: some View {
         ZStack {
             Circle()
-                .fill(Color(red: 0.85, green: 0.20, blue: 0.55).opacity(0.25 + 0.50 * glow))
-                .frame(width: 150 + 170 * glow, height: 150 + 170 * glow)
-                .blur(radius: 70)
-                .offset(x: -40 + 80 * glow, y: -60 + 60 * glow)
-            Circle()
-                .fill(Color(red: 0.50, green: 0.22, blue: 0.70).opacity(0.25 + 0.45 * glow))
-                .frame(width: 130 + 150 * glow, height: 130 + 150 * glow)
+                .fill(Color.black.opacity(0.35 + 0.30 * glow))
+                .frame(width: 160 + 160 * glow, height: 160 + 160 * glow)
                 .blur(radius: 60)
-                .offset(x: 60 - 90 * glow, y: 50 - 40 * glow)
+                .offset(x: -30 + 70 * glow, y: -50 + 60 * glow)
             Circle()
-                .fill(Color(red: 0.95, green: 0.35, blue: 0.65).opacity(0.15 + 0.35 * glow))
-                .frame(width: 100 + 120 * glow, height: 100 + 120 * glow)
+                .fill(Color(red: 0.95, green: 0.35, blue: 0.65).opacity(0.25 + 0.45 * glow))
+                .frame(width: 140 + 150 * glow, height: 140 + 150 * glow)
+                .blur(radius: 55)
+                .offset(x: 50 - 80 * glow, y: 40 - 50 * glow)
+            Circle()
+                .fill(Color(red: 0.45, green: 0.35, blue: 0.75).opacity(0.20 + 0.35 * glow))
+                .frame(width: 120 + 130 * glow, height: 120 + 130 * glow)
                 .blur(radius: 50)
-                .offset(x: 10 - 20 * glow, y: 80 - 90 * glow)
+                .offset(x: 30 * glow, y: 70 - 80 * glow)
         }
         .animation(.easeOut(duration: 0.12), value: glow)
     }
@@ -173,31 +196,26 @@ struct CaptureView: View {
     @ViewBuilder
     private var focusSection: some View {
         if !openItems.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Image(systemName: "bolt.fill").foregroundColor(Theme.accent)
-                    Text("Open Focus").font(.headline).foregroundColor(.white)
-                    Spacer()
-                    Text("\(openItems.count)").font(.caption.bold()).foregroundColor(Theme.accent)
-                }
-                ForEach(openItems.prefix(2)) { item in
-                    HStack(spacing: 10) {
-                        Circle().fill(Theme.accent).frame(width: 6, height: 6)
-                        Text(item.title).font(.subheadline).foregroundColor(.white.opacity(0.85)).lineLimit(1)
-                        Spacer()
-                        if let due = item.dueDate {
-                            Text(due.formatted(date: .abbreviated, time: .omitted))
-                                .font(.caption2)
-                                .foregroundColor(Theme.accent)
-                        } else if let due = item.dueText {
-                            Text(due).font(.caption2).foregroundColor(Theme.textSecondary)
+            GradientTile(palette: Palette.cream, blobColor: Color.black.opacity(0.35)) {
+                VStack(alignment: .leading, spacing: 10) {
+                    TileCaption(text: "Open focus", color: .black.opacity(0.6))
+                    ForEach(openItems.prefix(2)) { item in
+                        HStack(spacing: 8) {
+                            Circle().fill(Color.black.opacity(0.55)).frame(width: 6, height: 6)
+                            Text(item.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.black.opacity(0.8))
+                                .lineLimit(1)
+                            Spacer()
+                            if let due = item.dueDate {
+                                Text(due.formatted(date: .abbreviated, time: .omitted))
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundColor(.black.opacity(0.55))
+                            }
                         }
                     }
                 }
             }
-            .padding(16)
-            .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.2), lineWidth: 1))
         }
     }
 
@@ -211,7 +229,7 @@ struct CaptureView: View {
                     .foregroundColor(Theme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
-                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
+                    .background(LinearGradient(colors: Palette.slate, startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 24))
             }
         }
     }
@@ -261,8 +279,8 @@ struct CaptureView: View {
                 }
             }
             .padding(16)
-            .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.accent.opacity(0.35), lineWidth: 1))
+            .background(LinearGradient(colors: Palette.slate, startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 24))
+
         }
     }
 
