@@ -28,8 +28,6 @@ struct CaptureView: View {
     @State private var seedError = false
     @State private var duplicateCount = 0
     @State private var showDemoInfo = false
-    @State private var showKeyAlert = false
-    @State private var keyInput = ""
 
     enum ProcessingPhase {
         case idle, recording, transcribing, extracting, saved
@@ -64,19 +62,8 @@ struct CaptureView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(AppConfig.useMockTranscription
-                     ? "Demo mode is ON: transcription, extraction and chat run on local mocks, so the whole product works with zero setup. To go live: paste a Groq key via the gear icon, then set useMockTranscription = false in AppConfig.swift."
+                     ? "Demo mode is ON: transcription, extraction and chat run on local mocks, so the whole product works with zero setup. To go live, store a Groq key in the Keychain and set useMockTranscription = false in AppConfig.swift."
                      : "Live mode: using your Groq key for transcription, extraction and chat.")
-            }
-            .alert("Groq API key", isPresented: $showKeyAlert) {
-                TextField("Paste your key", text: $keyInput)
-                Button("Save") {
-                    let trimmed = keyInput.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty { AppConfig.groqAPIKey = trimmed }
-                    keyInput = ""
-                }
-                Button("Cancel", role: .cancel) { keyInput = "" }
-            } message: {
-                Text("Stored securely in the iOS Keychain.")
             }
         }
     }
@@ -94,7 +81,6 @@ struct CaptureView: View {
                     .foregroundColor(.white)
             }
             Spacer()
-            CircleIconButton(systemName: "gearshape.fill") { showKeyAlert = true }
             CircleIconButton(systemName: "sparkles", action: seedDemoSession)
         }
         .padding(.top, 12)
@@ -125,38 +111,63 @@ struct CaptureView: View {
         Button {
             Task { await toggle() }
         } label: {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(Theme.accent.opacity(phase == .recording ? 0.22 : 0.10))
-                        .frame(width: 150, height: 150)
-                        .blur(radius: 10)
-                    Circle()
-                        .fill(LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 112, height: 112)
-                        .shadow(color: Theme.purpleDeep.opacity(0.6), radius: 24, y: 10)
-                    Image(systemName: phase == .recording ? "waveform" : "mic.fill")
-                        .font(.system(size: 38, weight: .semibold))
+            ZStack {
+                gradientField
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .frame(width: 112, height: 112)
+                            .shadow(color: Theme.purpleDeep.opacity(0.6), radius: 24, y: 10)
+                            .scaleEffect(1.0 + 0.08 * glow)
+                        Image(systemName: phase == .recording ? "waveform" : "mic.fill")
+                            .font(.system(size: 38, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    Text(statusTitle)
+                        .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
                         .foregroundColor(.white)
-                        .symbolEffect(.pulse, options: .repeating, isActive: phase == .recording)
+                    Text(statusSubtitle)
+                        .font(.caption)
+                        .foregroundColor(Theme.textSecondary)
                 }
-                Text(statusTitle)
-                    .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundColor(.white)
-                Text(statusSubtitle)
-                    .font(.caption)
-                    .foregroundColor(Theme.textSecondary)
+                .padding(.vertical, 28)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 28)
             .background(Theme.card, in: RoundedRectangle(cornerRadius: 28))
+            .clipShape(RoundedRectangle(cornerRadius: 28))
             .overlay(
                 RoundedRectangle(cornerRadius: 28)
-                    .stroke(phase == .recording ? Theme.accent.opacity(0.5) : Color.white.opacity(0.06), lineWidth: 1)
+                    .stroke(phase == .recording ? Theme.accent.opacity(0.4) : Color.white.opacity(0.06), lineWidth: 1)
             )
         }
         .buttonStyle(PressableStyle())
         .disabled(phase == .transcribing || phase == .extracting)
+    }
+
+    private var glow: Double {
+        phase == .recording ? max(0.18, recording.soundLevel) : 0.18
+    }
+
+    private var gradientField: some View {
+        ZStack {
+            Circle()
+                .fill(Color(red: 0.85, green: 0.20, blue: 0.55).opacity(0.25 + 0.50 * glow))
+                .frame(width: 150 + 170 * glow, height: 150 + 170 * glow)
+                .blur(radius: 70)
+                .offset(x: -40 + 80 * glow, y: -60 + 60 * glow)
+            Circle()
+                .fill(Color(red: 0.50, green: 0.22, blue: 0.70).opacity(0.25 + 0.45 * glow))
+                .frame(width: 130 + 150 * glow, height: 130 + 150 * glow)
+                .blur(radius: 60)
+                .offset(x: 60 - 90 * glow, y: 50 - 40 * glow)
+            Circle()
+                .fill(Color(red: 0.95, green: 0.35, blue: 0.65).opacity(0.15 + 0.35 * glow))
+                .frame(width: 100 + 120 * glow, height: 100 + 120 * glow)
+                .blur(radius: 50)
+                .offset(x: 10 - 20 * glow, y: 80 - 90 * glow)
+        }
+        .animation(.easeOut(duration: 0.12), value: glow)
     }
 
     @ViewBuilder
@@ -315,23 +326,28 @@ struct CaptureView: View {
     private func toggle() async {
         switch phase {
         case .idle:
-            let granted = await recording.requestMicrophonePermission()
-            guard granted else { showPermissionDenied = true; return }
             resetState()
-            let started = recording.start()
-            guard started else {
-                errorMessage = recording.errorMessage ?? "Could not start the audio session."
-                return
-            }
-            phase = .recording
+            await beginListening()
         case .recording:
             let url = recording.stop()
             guard let url else { return }
             await processPipeline(url: url)
         case .saved:
             resetState()
+            await beginListening()
         default: break
         }
+    }
+
+    private func beginListening() async {
+        let granted = await recording.requestMicrophonePermission()
+        guard granted else { showPermissionDenied = true; return }
+        let started = recording.start()
+        guard started else {
+            errorMessage = recording.errorMessage ?? "Could not start the audio session."
+            return
+        }
+        phase = .recording
     }
 
     private func resetState() {

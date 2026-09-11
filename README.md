@@ -96,5 +96,5 @@ This keeps token use small, answers citable, and prevents the model from inventi
 
 ## Setup
 1. **Zero-key demo mode (default):** with `useMockTranscription = true`, transcription, extraction AND chat answering are all mocked behind protocols, so the entire product is explorable with no accounts or keys.
-2. **Real mode:** create a free Groq key at https://console.groq.com/keys, run the app, tap the settings (gear) icon on the Capture tab and paste the key (stored in the iOS Keychain), then set `useMockTranscription = false` in `Aftermind/Support/AppConfig.swift`.
+2. **Real mode (optional):** create a free Groq key at https://console.groq.com/keys and store it in the app's iOS Keychain entry `groq_api_key` on your machine (the repo ships only a placeholder), then set `useMockTranscription = false` in `Aftermind/Support/AppConfig.swift`. The default zero-key demo mode mocks transcription, extraction and chat end-to-end.
 3. On macOS: `brew install xcodegen && xcodegen generate && open Aftermind.xcodeproj`, run on an iOS 17+ simulator.

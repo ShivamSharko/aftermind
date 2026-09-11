@@ -4,9 +4,11 @@ enum AppConfig {
     /// Groq API key (free tier). Get one at https://console.groq.com/keys
     /// WARNING: never commit your real key to GitHub.
     private static let keychainKey = "groq_api_key"
+
+    /// Real-mode keys are read from the iOS Keychain (injected on a developer machine).
+    /// The placeholder keeps zero-key demo mode working; no secrets ship in the repo.
     static var groqAPIKey: String {
-        get { KeychainHelper.load(key: keychainKey) ?? "PASTE_YOUR_GROQ_API_KEY_HERE" }
-        set { KeychainHelper.save(key: keychainKey, value: newValue) }
+        KeychainHelper.load(key: keychainKey) ?? "PASTE_YOUR_GROQ_API_KEY_HERE"
     }
     
     static func setup() { NotificationService.requestPermission() }
