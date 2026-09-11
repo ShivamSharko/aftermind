@@ -3,7 +3,7 @@
 A personal context notetaker for iOS. Aftermind listens to a conversation, transcribes it, extracts **what is actually worth remembering** as typed memory objects (commitments, decisions, tasks, facts, ideas), stores them locally, and lets you chat with that memory — not with the raw transcript.
 
 ## Demo
-[VIDEO_LINK]
+[▶️ Watch the demo](https://youtu.be/4mMeswnTZBE)
 
 ## What I built
 The core loop, end to end: **Record → Transcribe → Clean/Structure → Store → Chat**
