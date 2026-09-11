@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftData
 
 struct CaptureView: View {
+    var onOpenMemory: () -> Void = {}
+
     @Environment(\.modelContext) private var modelContext
     @Query private var sessions: [SessionModel]
     @Query(sort: \MemoryItemModel.createdAt, order: .reverse) private var allItems: [MemoryItemModel]
@@ -15,8 +17,8 @@ struct CaptureView: View {
     }
 
     @StateObject private var recording = RecordingService()
-    private let transcriptionService = AppConfig.transcriptionService
-    private let extractionService = ContextExtractor.service
+    private var transcriptionService: TranscriptionServiceProtocol { AppConfig.transcriptionService }
+    private var extractionService: ContextExtractionServiceProtocol { ContextExtractor.service }
 
     @State private var showPermissionDenied = false
     @State private var phase: ProcessingPhase = .idle
@@ -25,6 +27,9 @@ struct CaptureView: View {
     @State private var savedSession: SessionModel?
     @State private var seedError = false
     @State private var duplicateCount = 0
+    @State private var showDemoInfo = false
+    @State private var showKeyAlert = false
+    @State private var keyInput = ""
 
     enum ProcessingPhase {
         case idle, recording, transcribing, extracting, saved
@@ -38,7 +43,6 @@ struct CaptureView: View {
                     greetingSection
                     chipsSection
                     micCard
-                    mainButton
                     focusSection
                     transcriptSection
                     savedSection
@@ -56,6 +60,24 @@ struct CaptureView: View {
             .alert("Could not load demo session", isPresented: $seedError) {
                 Button("OK", role: .cancel) { }
             }
+            .alert("Demo mode", isPresented: $showDemoInfo) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(AppConfig.useMockTranscription
+                     ? "Demo mode is ON: transcription, extraction and chat run on local mocks, so the whole product works with zero setup. To go live: paste a Groq key via the gear icon, then set useMockTranscription = false in AppConfig.swift."
+                     : "Live mode: using your Groq key for transcription, extraction and chat.")
+            }
+            .alert("Groq API key", isPresented: $showKeyAlert) {
+                TextField("Paste your key", text: $keyInput)
+                Button("Save") {
+                    let trimmed = keyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty { AppConfig.groqAPIKey = trimmed }
+                    keyInput = ""
+                }
+                Button("Cancel", role: .cancel) { keyInput = "" }
+            } message: {
+                Text("Stored securely in the iOS Keychain.")
+            }
         }
     }
 
@@ -72,6 +94,7 @@ struct CaptureView: View {
                     .foregroundColor(.white)
             }
             Spacer()
+            CircleIconButton(systemName: "gearshape.fill") { showKeyAlert = true }
             CircleIconButton(systemName: "sparkles", action: seedDemoSession)
         }
         .padding(.top, 12)
@@ -92,58 +115,45 @@ struct CaptureView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 PillChip(title: phaseChip, isSelected: true)
-                PillChip(title: "\(sessions.count) sessions", isSelected: false)
-                if AppConfig.useMockTranscription {
-                    PillChip(title: "demo mode", isSelected: false)
-                }
+                PillChip(title: "\(sessions.count) sessions", isSelected: false, action: onOpenMemory)
+                PillChip(title: AppConfig.useMockTranscription ? "demo mode" : "live mode", isSelected: false) { showDemoInfo = true }
             }
         }
     }
 
     private var micCard: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Theme.accent.opacity(phase == .recording ? 0.22 : 0.10))
-                    .frame(width: 150, height: 150)
-                    .blur(radius: 10)
-                Circle()
-                    .fill(LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 112, height: 112)
-                    .shadow(color: Theme.purpleDeep.opacity(0.6), radius: 24, y: 10)
-                Image(systemName: phase == .recording ? "waveform" : "mic.fill")
-                    .font(.system(size: 38, weight: .semibold))
-                    .foregroundColor(.white)
-                    .symbolEffect(.pulse, options: .repeating, isActive: phase == .recording)
-            }
-            Text(statusTitle)
-                .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundColor(.white)
-            Text(statusSubtitle)
-                .font(.caption)
-                .foregroundColor(Theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 28))
-        .overlay(RoundedRectangle(cornerRadius: 28).stroke(Color.white.opacity(0.06), lineWidth: 1))
-    }
-
-    private var mainButton: some View {
         Button {
             Task { await toggle() }
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: buttonIcon)
-                Text(buttonTitle)
-                    .fontWeight(.bold)
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Theme.accent.opacity(phase == .recording ? 0.22 : 0.10))
+                        .frame(width: 150, height: 150)
+                        .blur(radius: 10)
+                    Circle()
+                        .fill(LinearGradient(colors: [Theme.purpleLight, Theme.purpleDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 112, height: 112)
+                        .shadow(color: Theme.purpleDeep.opacity(0.6), radius: 24, y: 10)
+                    Image(systemName: phase == .recording ? "waveform" : "mic.fill")
+                        .font(.system(size: 38, weight: .semibold))
+                        .foregroundColor(.white)
+                        .symbolEffect(.pulse, options: .repeating, isActive: phase == .recording)
+                }
+                Text(statusTitle)
+                    .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
+                    .foregroundColor(.white)
+                Text(statusSubtitle)
+                    .font(.caption)
+                    .foregroundColor(Theme.textSecondary)
             }
-            .foregroundColor(buttonForegroundColor)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(buttonColor)
-            .clipShape(Capsule())
-            .shadow(color: buttonColor.opacity(0.35), radius: 16, y: 6)
+            .padding(.vertical, 28)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: 28))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28)
+                    .stroke(phase == .recording ? Theme.accent.opacity(0.5) : Color.white.opacity(0.06), lineWidth: 1)
+            )
         }
         .buttonStyle(PressableStyle())
         .disabled(phase == .transcribing || phase == .extracting)
@@ -288,44 +298,11 @@ struct CaptureView: View {
 
     private var statusSubtitle: String {
         switch phase {
-        case .idle: return "Aftermind will listen, transcribe and extract context"
-        case .recording: return "Listening... tap stop when the conversation ends"
+        case .idle: return "One tap on this card starts and stops the capture"
+        case .recording: return "Listening... tap the card to stop"
         case .transcribing: return "Turning audio into text"
         case .extracting: return "Finding what is worth remembering"
-        case .saved: return "Check the Memory tab or ask in Chat"
-        }
-    }
-
-    private var buttonTitle: String {
-        switch phase {
-        case .idle: return "Start listening"
-        case .recording: return "Stop listening"
-        case .transcribing, .extracting: return "Processing..."
-        case .saved: return "Record another"
-        }
-    }
-
-    private var buttonIcon: String {
-        switch phase {
-        case .idle: return "mic.fill"
-        case .recording: return "stop.fill"
-        case .transcribing, .extracting: return "hourglass"
-        case .saved: return "plus"
-        }
-    }
-
-    private var buttonColor: Color {
-        switch phase {
-        case .recording: return Color(red: 0.95, green: 0.30, blue: 0.35)
-        case .transcribing, .extracting: return Color.white.opacity(0.20)
-        default: return Theme.accent
-        }
-    }
-
-    private var buttonForegroundColor: Color {
-        switch phase {
-        case .recording, .transcribing, .extracting: return .white
-        case .idle, .saved: return .black
+        case .saved: return "Saved - tap the card to record another"
         }
     }
 

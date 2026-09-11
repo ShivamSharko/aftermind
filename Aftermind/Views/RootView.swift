@@ -20,7 +20,7 @@ struct RootView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             ZStack {
-                CaptureView().opacity(selected == .capture ? 1 : 0)
+                CaptureView(onOpenMemory: { selected = .memory }).opacity(selected == .capture ? 1 : 0)
                 MemoryListView().opacity(selected == .memory ? 1 : 0)
                 ChatView().opacity(selected == .chat ? 1 : 0)
                 ExploreView().opacity(selected == .explore ? 1 : 0)
