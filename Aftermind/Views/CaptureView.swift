@@ -5,7 +5,9 @@ struct CaptureView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var sessions: [SessionModel]
     @Query(filter: #Predicate<MemoryItemModel> { item in
-        (item.type == "commitment" || item.type == "task") && item.isCompleted == false
+        (item.type == "commitment" || item.type == "task") && 
+        item.status != "done" && 
+        item.status != "completed"
     }, sort: \MemoryItemModel.createdAt, order: .reverse) private var openItems: [MemoryItemModel]
 
     @StateObject private var recording = RecordingService()

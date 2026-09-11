@@ -203,9 +203,6 @@ struct MemoryListView: View {
                     .foregroundColor(Theme.textSecondary)
             }
             Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
-                .foregroundColor(Theme.textSecondary)
         }
         .padding(14)
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 20))

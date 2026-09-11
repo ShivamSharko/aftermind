@@ -3,7 +3,7 @@ import SwiftData
 
 struct ChatView: View {
     @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject private var chatHistory: ChatHistoryService
+    @Environment(ChatHistoryService.self) private var chatHistory
     @State private var inputText = ""
     @State private var isLoading = false
 

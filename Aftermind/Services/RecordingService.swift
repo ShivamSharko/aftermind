@@ -21,39 +21,42 @@ final class RecordingService: ObservableObject {
 
     @discardableResult
     func start() -> Bool {
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
-            try session.setActive(true, options: .notifyOthersOnDeactivation)
-        } catch {
-            errorMessage = "Audio session failed: \(error.localizedDescription)"
-            return false
+        Task.detached(priority: .userInitiated) {
+            let session = AVAudioSession.sharedInstance()
+            do {
+                try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+                try session.setActive(true, options: .notifyOthersOnDeactivation)
+            } catch {
+                await MainActor.run { self.errorMessage = "Audio session failed: \(error.localizedDescription)" }
+                return
+            }
+            
+            let fileName = "aftermind-\(Int(Date().timeIntervalSince1970)).m4a"
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+            
+            let settings: [String: Any] = [
+                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                AVSampleRateKey: 44100.0,
+                AVNumberOfChannelsKey: 1,
+                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            ]
+            
+            do {
+                let recorder = try AVAudioRecorder(url: url, settings: settings)
+                recorder.prepareToRecord()
+                recorder.record()
+                await MainActor.run {
+                    self.recorder = recorder
+                    self.recordingURL = url
+                    self.isRecording = true
+                    self.elapsedSeconds = 0
+                    self.startTimer()
+                }
+            } catch {
+                await MainActor.run { self.errorMessage = "Could not start recording: \(error.localizedDescription)" }
+            }
         }
-
-        let fileName = "aftermind-\(Int(Date().timeIntervalSince1970)).m4a"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
-
-        let settings: [String: Any] = [
-            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 44100.0,
-            AVNumberOfChannelsKey: 1,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-        ]
-
-        do {
-            let recorder = try AVAudioRecorder(url: url, settings: settings)
-            recorder.prepareToRecord()
-            recorder.record()
-            self.recorder = recorder
-            self.recordingURL = url
-            self.isRecording = true
-            self.elapsedSeconds = 0
-            startTimer()
-            return true
-        } catch {
-            errorMessage = "Could not start recording: \(error.localizedDescription)"
-            return false
-        }
+        return true
     }
 
     func stop() -> URL? {
@@ -73,6 +76,7 @@ final class RecordingService: ObservableObject {
                 self?.elapsedSeconds += 1
             }
         }
+        RunLoop.current.add(timer!, forMode: .common)
     }
 
     private func stopTimer() {
